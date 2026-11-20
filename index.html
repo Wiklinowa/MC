@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Monte Carlo Forecast – prognoza backlogu</title>
+<title>Monte Carlo Forecast – zespoły Alpha i Beta</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root{
@@ -139,6 +139,49 @@ tr.hl td{background:var(--g50);font-weight:600}
 @keyframes spin{to{transform:rotate(360deg)}}
 .method li{margin:4px 0}
 footer{color:var(--muted);font-size:12px;text-align:center;margin-top:30px}
+/* Tabs */
+[hidden]{display:none!important}
+section{scroll-margin-top:170px}
+.tabs{max-width:1440px;margin:14px auto 0;display:flex;gap:4px;border-bottom:1px solid var(--border)}
+.tab{border:none;background:transparent;padding:9px 18px 11px;font:inherit;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;border-radius:9px 9px 0 0;position:relative}
+.tab:hover{background:var(--g50);color:var(--g700)}
+.tab.on{color:var(--g700);background:#fff}
+.tab.on::after{content:"";position:absolute;left:14px;right:14px;bottom:-1px;height:3px;border-radius:3px;background:var(--g700)}
+.seg.lg button{padding:6px 12px;font-size:13px}
+.seg-label{font-size:12.5px;color:var(--muted);font-weight:600}
+/* Beta */
+.bcontrols{grid-template-columns:1fr 1.5fr 1.1fr}
+@media(max-width:1100px){.bcontrols{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.bcontrols{grid-template-columns:1fr}}
+.ep-tbl{width:auto;margin-bottom:6px}
+.ep-tbl th,.ep-tbl td{padding:3px 6px;text-align:left;border-bottom:none;white-space:nowrap}
+.ep-tbl thead th{background:transparent;color:var(--muted);font-size:12px;position:static}
+.ep-tbl input{width:66px;padding:4px 6px}
+.ep-tbl tbody tr:hover td{background:transparent}
+.known{font-size:10.5px;background:var(--t100);color:var(--t600);border-radius:999px;padding:1px 7px;margin-left:4px;font-weight:600}
+.exec{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:18px}
+@media(max-width:1100px){.exec{grid-template-columns:1fr}}
+.verdict-card h3{font-size:16px;margin:0}
+.verdict{display:flex;gap:22px;align-items:center;margin-top:14px}
+@media(max-width:560px){.verdict{flex-direction:column;align-items:flex-start}}
+.light{width:136px;height:136px;flex:none;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:8px solid;box-shadow:inset 0 0 0 6px #fff,0 6px 20px rgba(0,0,0,.06)}
+.light span{font-size:26px;line-height:1}
+.light b{font-size:29px;margin-top:4px;letter-spacing:-.5px}
+.light.ok{background:var(--g100);border-color:var(--g500);color:var(--g700)}
+.light.mid{background:#fff7dc;border-color:#e9c23e;color:#8a6a00}
+.light.bad{background:#fdecea;border-color:#e58a80;color:#b0433a}
+.verdict-ans{font-size:20px;font-weight:700;margin-bottom:6px}
+.verdict-ans.ok{color:var(--g700)}.verdict-ans.mid{color:#8a6a00}.verdict-ans.bad{color:#b0433a}
+.verdict-txt{font-size:15px;margin:0 0 10px}
+.risk-warn{background:#fff6d6;color:#8a6a00}
+.risk-bad{background:#fdecea;color:#b0433a}
+.risk-badge.sm{font-size:12px;padding:2px 10px}
+.tile.sm .v{font-size:21px}
+.clickable tbody tr{cursor:pointer}
+td.colhl,th.colhl{background:var(--g50);font-weight:600;color:var(--g900)}
+.qa-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 22px}
+@media(max-width:900px){.qa-grid{grid-template-columns:1fr}}
+.qa .q{font-weight:650;color:var(--g900);margin:12px 0 4px}
 </style>
 </head>
 <body>
@@ -148,24 +191,44 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:30px}
   <div class="top-inner">
     <div class="logo">MC</div>
     <div>
-      <h1>Monte Carlo Forecast · Prognoza dostarczenia backlogu</h1>
+      <h1>Monte Carlo Forecast · Prognoza dostarczenia</h1>
       <div class="subtitle">Probabilistyczne prognozowanie na podstawie historycznego throughputu · sprinty 2-tygodniowe</div>
     </div>
-    <div class="top-actions">
+    <div class="top-actions" data-pane="beta" hidden>
+      <span class="seg-label">Scenariusz:</span>
+      <div class="seg lg" id="bScen" role="group" aria-label="Scenariusz prognozy">
+        <button data-s="cons" title="Scenariusz konserwatywny">🛡️ konserwatywny</button>
+        <button data-s="real" class="on" title="Scenariusz realistyczny">🎯 realistyczny</button>
+        <button data-s="opt" title="Scenariusz optymistyczny">🚀 optymistyczny</button>
+      </div>
+      <span class="run-info" id="bRunInfo">—</span>
+      <button class="btn" id="bCsvBtn" title="Eksport podsumowania wyników do CSV">⬇ CSV – wyniki</button>
+      <button class="btn" id="bCsvRawBtn" title="Eksport wszystkich iteracji do CSV">⬇ CSV – iteracje</button>
+      <button class="btn primary" id="bRunBtn">↻ Uruchom ponownie symulację</button>
+    </div>
+    <div class="top-actions" data-pane="alpha">
       <span class="run-info" id="runInfo">—</span>
       <button class="btn" id="csvBtn" title="Eksport podsumowania wyników do CSV">⬇ CSV – wyniki</button>
       <button class="btn" id="csvRawBtn" title="Eksport wszystkich iteracji do CSV">⬇ CSV – iteracje</button>
       <button class="btn primary" id="runBtn">↻ Uruchom ponownie symulację</button>
     </div>
   </div>
-  <nav class="toc">
+  <nav class="tabs" role="tablist">
+    <button class="tab on" role="tab" data-tab="alpha" aria-selected="true">Prognoza - zespół Alpha</button>
+    <button class="tab" role="tab" data-tab="beta" aria-selected="false">Prognoza - zespół Beta</button>
+  </nav>
+  <nav class="toc" data-pane="beta" hidden>
+    <a href="#bParams">Parametry</a><a href="#bSummary">Executive Summary</a><a href="#bModel">Model uczenia i wzrostu</a>
+    <a href="#bCharts">Wykresy</a><a href="#bRisk">Ryzyko</a><a href="#bTables">Statystyki</a><a href="#bAnswers">Odpowiedzi dla biznesu</a><a href="#bMethod">Metodologia</a>
+  </nav>
+  <nav class="toc" data-pane="alpha">
     <a href="#params">Parametry</a><a href="#summary">Executive Summary</a><a href="#answers">Odpowiedzi dla biznesu</a>
     <a href="#manager">Interpretacja dla managera</a><a href="#charts">Wykresy</a><a href="#compare">Porównanie A vs B</a>
     <a href="#risk">Ryzyko</a><a href="#tables">Statystyki</a><a href="#method">Metodologia</a>
   </nav>
 </header>
 
-<main>
+<main id="tabAlpha" data-pane="alpha">
   <!-- PARAMETERS -->
   <section id="params" class="card" style="margin-top:0">
     <h2>Parametry symulacji</h2>
@@ -349,6 +412,183 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:30px}
   <footer>Monte Carlo Forecast · wszystkie obliczenia wykonywane lokalnie w przeglądarce</footer>
 </main>
 
+<!-- ======================= ZESPÓŁ BETA ======================= -->
+<main id="tabBeta" data-pane="beta" hidden>
+  <section id="bParams" class="card" style="margin-top:0">
+    <h2>Parametry – zespół Beta</h2>
+    <p class="desc">Prognoza dostarczenia pozostałych Epików. Zmiana dowolnego parametru lub scenariusza automatycznie przelicza wszystkie wyniki i wykresy.</p>
+    <div class="controls bcontrols">
+      <div>
+        <div class="field">
+          <label class="lbl">Start prognozy</label>
+          <input type="date" id="bStart" value="2026-12-01">
+          <div class="hint">Sprint 1 zaczyna się tego dnia; sprint = 14 dni.</div>
+        </div>
+        <div class="field">
+          <label class="lbl">Docelowa data biznesowa</label>
+          <input type="date" id="bTarget" value="2027-05-31">
+        </div>
+        <div class="field">
+          <label class="lbl">Wzrost przepustowości od <span class="tip" tabindex="0" data-tip="Data, od której działa probabilistyczny wzrost przepustowości (koniec ferii, lepsza znajomość domeny i Epików). Sprint przełomowy liczony proporcjonalnie do liczby dni po tej dacie.">?</span></label>
+          <input type="date" id="bBoost" value="2027-03-01">
+        </div>
+        <div class="field">
+          <label class="lbl">Iteracje Monte Carlo <span class="tip" tabindex="0" data-tip="Monte Carlo: metoda, która tysiące razy losowo „odtwarza” przyszłość na podstawie danych historycznych i założeń. Więcej iteracji = stabilniejsze percentyle.">?</span></label>
+          <select id="bIters">
+            <option value="100000" selected>100 000</option>
+            <option value="250000">250 000</option>
+            <option value="500000">500 000</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="lbl">Historyczny throughput (historyjki / 2 tyg.) <span class="tip" tabindex="0" data-tip="Throughput: liczba historyjek faktycznie dostarczonych przez zespół w 2-tygodniowym okresie (100% czasu zespołu). Każda iteracja losuje wartości z tej listy ze zwracaniem.">?</span></label>
+        <div class="chips" id="bTpChips"></div>
+        <div class="inline">
+          <button class="btn sm" id="bTpAdd">+ Dodaj sprint</button>
+          <input type="text" id="bTpPaste" placeholder="lub wklej listę, np. 3, 4, 5, 4">
+          <button class="btn sm" id="bTpApply">Zastosuj</button>
+          <button class="btn sm" id="bTpReset" title="Przywróć dane domyślne">Reset</button>
+        </div>
+        <div class="err" id="bTpErr"></div>
+        <div class="hint" id="bTpStats"></div>
+        <div class="field" style="margin-top:14px">
+          <label class="lbl">Alokacja czasu zespołu na inicjatywę <span class="tip" tabindex="0" data-tip="Jaka część przepustowości zespołu trafia do tej inicjatywy. Wylosowany throughput sprintu jest mnożony przez ten współczynnik.">?</span></label>
+          <div class="bigval"><span id="bAllocVal">75</span>%</div>
+          <div class="range-row">
+            <input type="range" id="bAlloc" min="10" max="100" step="5" value="75">
+            <input type="number" id="bAllocNum" min="1" max="100" value="75">
+          </div>
+        </div>
+      </div>
+      <div>
+        <label class="lbl">Estymacje Epików (historyjki) <span class="tip" tabindex="0" data-tip="W każdej iteracji rozmiar każdego Epika jest losowany z rozkładu jednostajnego na liczbach całkowitych [min, max]. Suma Epików to zakres prac w danej iteracji.">?</span></label>
+        <table class="ep-tbl"><thead><tr><th>Epik</th><th>Min</th><th>Max</th><th></th></tr></thead><tbody id="bEpics"></tbody></table>
+        <div class="inline">
+          <button class="btn sm" id="bEpAdd">+ Dodaj Epik</button>
+          <button class="btn sm" id="bEpReset">Reset</button>
+        </div>
+        <div class="err" id="bEpErr"></div>
+        <div class="hint" id="bEpInfo"></div>
+      </div>
+    </div>
+    <div class="glossary">
+      <span class="gl">P50 <span class="tip" tabindex="0" data-tip="P50 (mediana): w 50% symulacji wszystkie Epiki ukończono do tej daty lub wcześniej. To „rzut monetą” – nie nadaje się na zobowiązanie.">?</span></span>
+      <span class="gl">P85 <span class="tip" tabindex="0" data-tip="P85: w 85% symulacji wszystkie Epiki ukończono do tej daty lub wcześniej. Rekomendowany poziom do planowania i komunikacji ze sponsorem.">?</span></span>
+      <span class="gl">P95 <span class="tip" tabindex="0" data-tip="P95: w 95% symulacji wszystkie Epiki ukończono do tej daty lub wcześniej. Bardzo konserwatywny – dla zobowiązań krytycznych.">?</span></span>
+      <span class="gl">Monte Carlo <span class="tip" tabindex="0" data-tip="W każdej iteracji losujemy rozmiary Epików, tempo uczenia, wzrost od marca i throughput kolejnych sprintów, aż cały zakres zostanie dostarczony. Wynikiem jest pełny rozkład możliwych terminów.">?</span></span>
+      <span class="gl">Throughput <span class="tip" tabindex="0" data-tip="Throughput: liczba historyjek ukończonych w sprincie. Mierzy rzeczywistą przepustowość zespołu – nie wymaga estymacji w story pointach.">?</span></span>
+      <span class="gl">„Co najmniej” <span class="tip" tabindex="0" data-tip="Dla liczby Epików lub historyjek do danego dnia pewność 85% oznacza 15. percentyl rozkładu: w 85% symulacji dostarczono co najmniej tyle.">?</span></span>
+    </div>
+  </section>
+
+  <section id="bSummary">
+    <h2>Executive Summary</h2>
+    <p class="desc" id="bSummaryDesc"></p>
+    <div class="exec">
+      <div class="card verdict-card" id="bVerdict"></div>
+      <div class="grid g3" id="bTiles"></div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <h3>Porównanie scenariuszy <span class="tip" tabindex="0" data-tip="Scenariusze różnią się tempem uczenia, wielkością wzrostu przepustowości od marca, łącznym limitem efektywności i ryzykiem zakłóceń sprintu. Kliknij wiersz, aby przełączyć scenariusz.">?</span></h3>
+      <p class="desc">Kliknij wiersz, aby przełączyć aktywny scenariusz.</p>
+      <div class="tbl-wrap"><table id="bScenTbl" class="clickable"></table></div>
+    </div>
+  </section>
+
+  <section id="bModel" class="card">
+    <h2>Model prognozy: uczenie się domeny i wzrost przepustowości od marca</h2>
+    <p class="desc">Wszystkie założenia są jawne i zależą od wybranego scenariusza.</p>
+    <div class="grid g2">
+      <div>
+        <ul class="method" id="bModelList"></ul>
+        <div class="tbl-wrap" style="margin-top:12px"><table id="bScenParams"></table></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-head">
+          <div><h3>Efektywność zespołu w kolejnych sprintach</h3><p class="desc" style="margin:0">% historycznej efektywności: zakres możliwych wartości i środek rozkładu (bez zakłóceń).</p></div>
+          <div class="actions"><button class="btn sm" data-png="bModelChart">⬇ PNG</button></div>
+        </div>
+        <div class="chart-box"><canvas id="bModelChart"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="bCharts">
+    <div class="grid g2">
+      <div class="card chart-card" style="grid-column:1/-1">
+        <div class="chart-head">
+          <div><h2>Prawdopodobieństwo ukończenia wszystkich Epików do danego dnia (CDF)</h2>
+          <p class="desc" style="margin:0">Jakie jest prawdopodobieństwo ukończenia wszystkich Epików do konkretnej daty? To główny wykres decyzyjny.</p></div>
+          <div class="actions"><button class="btn sm" data-png="bCdf">⬇ PNG</button></div>
+        </div>
+        <div class="chart-box tall"><canvas id="bCdf"></canvas></div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-head">
+          <div><h2>Histogram dat ukończenia</h2><p class="desc" style="margin:0">Rozkład dat ukończenia wszystkich Epików (koniec sprintu).</p></div>
+          <div class="actions"><button class="btn sm" data-png="bHist">⬇ PNG</button></div>
+        </div>
+        <div class="chart-box"><canvas id="bHist"></canvas></div>
+        <div class="legend-note"><span class="key" style="background:#2e9e5b;margin-left:0"></span>≤ P50<span class="key" style="background:#8fd0a6"></span>P50–P85<span class="key" style="background:#c7ead3"></span>P85–P95<span class="key" style="background:#dfe7e2"></span>&gt; P95</div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-head">
+          <div><h2>Burn-up Forecast</h2><p class="desc" style="margin:0">Zakres Epików, postęp w czasie i rozkład możliwych ścieżek realizacji.</p></div>
+          <div class="actions"><button class="btn sm" data-png="bBurn">⬇ PNG</button></div>
+        </div>
+        <div class="chart-box"><canvas id="bBurn"></canvas></div>
+        <div class="legend-note">Cienkie linie: przykładowe ścieżki z symulacji. Pasma: 70% (P15–P85) i 90% (P5–P95) ścieżek. Poziome linie przerywane: granice kolejnych Epików (średnio).</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="bRisk">
+    <div class="grid g2">
+      <div class="card chart-card">
+        <div class="chart-head">
+          <div><h2>Tornado – wpływ czynników na termin</h2><p class="desc" style="margin:0" id="bTornadoDesc"></p></div>
+          <div class="actions"><button class="btn sm" data-png="bTornado">⬇ PNG</button></div>
+        </div>
+        <div class="chart-box tall"><canvas id="bTornado"></canvas></div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-head">
+          <div><h2>Wpływ założeń na termin ukończenia</h2><p class="desc" style="margin:0" id="bRiskDesc"></p></div>
+          <div class="actions"><button class="btn sm" data-png="bRiskP">⬇ PNG</button></div>
+        </div>
+        <div class="chart-box tall"><canvas id="bRiskP"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="bTables" class="card">
+    <h2>Statystyki wyników symulacji</h2>
+    <p class="desc">Pełny rozkład: średnia, mediana (P50), P85, P95 i odchylenie standardowe.</p>
+    <div class="tbl-wrap"><table id="bStatTbl"></table></div>
+    <div class="sec-title">Prawdopodobieństwo ukończenia wszystkich Epików do końca miesiąca</div>
+    <div class="tbl-wrap"><table id="bProbTbl"></table></div>
+    <div class="sec-title">Prognoza dla poszczególnych Epików (realizacja sekwencyjna 1 → N)</div>
+    <div class="tbl-wrap"><table id="bEpicTbl"></table></div>
+  </section>
+
+  <section id="bAnswers" class="card">
+    <h2>Odpowiedzi dla biznesu</h2>
+    <p class="desc">Jednoznaczne odpowiedzi generowane automatycznie z wyników symulacji – Product Owner i Sponsor nie muszą samodzielnie interpretować wykresów.</p>
+    <div class="answers" id="bQA"></div>
+    <div class="grid g2" style="margin-top:18px">
+      <div class="answers"><h3>Wnioski i rekomendacje</h3><ul id="bConcl"></ul></div>
+      <div><h3>Ostrzeżenia</h3><ul class="warnlist" id="bWarn"></ul></div>
+    </div>
+  </section>
+
+  <section id="bMethod" class="card">
+    <h2>Metodologia i założenia</h2>
+    <ul class="method" id="bMethodList"></ul>
+  </section>
+  <footer>Monte Carlo Forecast · zespół Beta · wszystkie obliczenia wykonywane lokalnie w przeglądarce</footer>
+</main>
+
 <script>
 "use strict";
 const DEFAULT_TP=[5,4,4,5,6,4,2,3,2,5,6];
@@ -467,7 +707,7 @@ function bindInputs(){
   });
   $('tpReset').addEventListener('click',()=>{state.tp=DEFAULT_TP.slice();renderChips();schedule();});
   $('runBtn').addEventListener('click',run);
-  document.querySelectorAll('.seg').forEach(seg=>seg.addEventListener('click',e=>{
+  document.querySelectorAll('#tabAlpha .seg').forEach(seg=>seg.addEventListener('click',e=>{
     const b=e.target.closest('button');if(!b)return;
     seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
     state.view[seg.dataset.view]=b.dataset.v; if(R){seg.dataset.view==='hist'?chartHist():chartItems();}
@@ -735,6 +975,449 @@ function exportRaw(){
 
 /* ---------- init ---------- */
 renderChips(); bindInputs(); scopeHint(); run();
+
+/* =================== ZESPÓŁ BETA =================== */
+const BETA_DEF={tp:[3,4,5,4,2,7,4,5],epics:[[4,6],[3,5],[3,4],[4,5],[4,7],[4,8]],alloc:75,start:'2026-12-01',target:'2027-05-31',boost:'2027-03-01',iters:100000,scen:'real'};
+const SCEN={
+  cons:{name:'konserwatywny',warm:3,lLo:0,lHi:.02,lCap:.10,bLo:.05,bHi:.15,cap:1.20,dP:.10,dF:.5},
+  real:{name:'realistyczny',warm:2,lLo:.01,lHi:.03,lCap:.15,bLo:.10,bHi:.25,cap:1.35,dP:.03,dF:.5},
+  opt:{name:'optymistyczny',warm:2,lLo:.02,lHi:.04,lCap:.20,bLo:.15,bHi:.30,cap:1.50,dP:0,dF:.5}};
+const SC_ORDER=['cons','real','opt'];
+const bs=JSON.parse(JSON.stringify(BETA_DEF));
+let BR=null,bTimer=null;
+const B_PATHN=20000,B_KP=40,EPS=1e-9;
+const plural=(n,a,b,c)=>{const d=n%10,t=n%100;return n===1?a:(d>=2&&d<=4&&(t<12||t>14))?b:c;};
+const epGen=n=>n===1?'1 Epika':`${n} Epików`;
+const hist=n=>`${n} ${plural(n,'historyjka','historyjki','historyjek')}`;
+const pcs=p=>{const r=Math.round(p*100);if(p>0&&r===0)return '< 1%';if(p<1&&r===100)return '> 99%';return r+'%';};
+const bEnd=k=>BR.S+(14*k-1)*DAY;
+const deadlineTxt=t=>{const d=new Date(t);return endOfMonth(d.getUTCFullYear(),d.getUTCMonth())===t?monthLabel(t):'do '+fmt(t);};
+const bFrac=(S,B,k)=>Math.min(1,Math.max(0,(S+14*k*DAY-B)/(14*DAY)));
+const bMult=(sc,r,b,f,k)=>Math.min(sc.cap,(1+Math.min(sc.lCap,r*Math.max(0,k-sc.warm)))*(1+b*f));
+const pct=x=>nf(x*100,0)+'%';
+function bRisk(p){return p>=.85?{lvl:'Niskie ryzyko',low:'niskie',emo:'✅',cls:'ok',badge:'risk-low',ans:'Tak – z wysokim prawdopodobieństwem'}
+  :p>=.5?{lvl:'Średnie ryzyko',low:'średnie',emo:'🟡',cls:'mid',badge:'risk-warn',ans:'Prawdopodobnie tak, ale z istotnym ryzykiem'}
+  :{lvl:'Wysokie ryzyko',low:'wysokie',emo:'🔴',cls:'bad',badge:'risk-bad',ans:'Raczej nie – termin jest zagrożony'};}
+function sumDist(epics){ // exact distribution of total scope (convolution of discrete uniforms)
+  let d=new Float64Array([1]);
+  epics.forEach(([a,b])=>{const w=b-a+1,nd=new Float64Array(d.length+b);for(let i=0;i<d.length;i++)if(d[i])for(let v=a;v<=b;v++)nd[i+v]+=d[i]/w;d=nd;});
+  const q=p=>{let c=0;for(let i=0;i<d.length;i++){c+=d[i];if(c>=p-1e-12)return i;}return d.length-1;};
+  return {q15:q(.15),q50:q(.5),q85:q(.85)};
+}
+
+function betaSim(p,full){
+  const n=p.iters,tp=Int32Array.from(p.tp),L=tp.length,E=p.epics.length,sc=SCEN[p.scen],a=p.alloc/100;
+  const mS=sprintsBy(p.S,p.T);
+  const mins=Int32Array.from(p.epics.map(e=>e[0])),maxs=Int32Array.from(p.epics.map(e=>e[1]));
+  let sumMin=0,sumMax=0;for(let e=0;e<E;e++){sumMin+=mins[e];sumMax+=maxs[e];}
+  const frac=new Float64Array(MAXK+2);for(let k=1;k<=MAXK+1;k++)frac[k]=bFrac(p.S,p.B,k);
+  const kF=new Int16Array(n),scope=new Int16Array(n);
+  const R0={n,mS,sumMin,sumMax,kF,scope,E};
+  const sq=sumDist(p.epics),NT=2*E+5;
+  let kE,kNL,kNB,kN,kX,epM,stM,capM,paths,sMin,sMax,pn=0;
+  if(full){
+    kE=[];for(let e=0;e<E;e++)kE.push(new Int16Array(n));
+    kNL=new Int16Array(n);kNB=new Int16Array(n);kN=new Int16Array(n);
+    kX=[];for(let t=0;t<5;t++)kX.push(new Int16Array(n)); // sumMin,sumMax,q15,q50,q85
+    epM=new Int16Array(n);stM=new Int16Array(n);capM=new Float32Array(n);
+    pn=Math.min(n,B_PATHN);paths=new Float32Array(pn*(B_KP+1));
+    sMin=new Float64Array(E);sMax=new Float64Array(E);
+    Object.assign(R0,{kE,kNL,kNB,kN,kX,epM,stM,capM,paths,pn,sMin,sMax,sq});
+  }
+  const sz=new Int32Array(E),cs=new Float64Array(E),thr=new Float64Array(NT),kt=new Int32Array(NT);
+  if(full){thr[2*E]=sumMin;thr[2*E+1]=sumMax;thr[2*E+2]=sq.q15;thr[2*E+3]=sq.q50;thr[2*E+4]=sq.q85;}
+  for(let i=0;i<n;i++){
+    let s=0;
+    for(let e=0;e<E;e++){sz[e]=mins[e]+((Math.random()*(maxs[e]-mins[e]+1))|0);s+=sz[e];cs[e]=s;}
+    scope[i]=s;
+    const r=sc.lLo+(sc.lHi-sc.lLo)*Math.random(),b=sc.bLo+(sc.bHi-sc.bLo)*Math.random();
+    let cF=0,cNL=0,cNB=0,cN=0,k=0,dF=0,dNL=0,dNB=0,dN=0,ei=0,left=0;
+    if(full){for(let e=0;e<E;e++){thr[2*e]=s-sz[e]+mins[e];thr[2*e+1]=s-sz[e]+maxs[e];}kt.fill(0);left=NT;}
+    const pi=full&&i<pn?i*(B_KP+1):-1;
+    while(k<MAXK){
+      if(dF&&k>=mS&&(!full||(left===0&&dNL&&dNB&&dN)))break;
+      k++;
+      let base=tp[(Math.random()*L)|0]*a;
+      if(sc.dP>0&&Math.random()<sc.dP)base*=sc.dF;
+      const Lm=1+Math.min(sc.lCap,r*Math.max(0,k-sc.warm)),Bm=1+b*frac[k];
+      cF+=base*Math.min(sc.cap,Lm*Bm);
+      if(!dF&&cF>=s-EPS)dF=k;
+      if(full){
+        cNL+=base*Math.min(sc.cap,Bm);cNB+=base*Math.min(sc.cap,Lm);cN+=base;
+        if(!dNL&&cNL>=s-EPS)dNL=k;if(!dNB&&cNB>=s-EPS)dNB=k;if(!dN&&cN>=s-EPS)dN=k;
+        while(ei<E&&cF>=cs[ei]-EPS){kE[ei][i]=k;ei++;}
+        if(left)for(let t=0;t<NT;t++)if(!kt[t]&&cF>=thr[t]-EPS){kt[t]=k;left--;}
+        if(pi>=0&&k<=B_KP)paths[pi+k]=Math.min(cF,s);
+        if(k===mS){let c=0;while(c<E&&cs[c]<=cF+EPS)c++;epM[i]=c;stM[i]=Math.floor(Math.min(cF,s)+EPS);capM[i]=cF;}
+      }
+    }
+    kF[i]=dF||MAXK;
+    if(full){
+      kNL[i]=dNL||MAXK;kNB[i]=dNB||MAXK;kN[i]=dN||MAXK;
+      for(let e=0;e<E;e++){sMin[e]+=kt[2*e]||MAXK;sMax[e]+=kt[2*e+1]||MAXK;}
+      for(let t=0;t<5;t++)kX[t][i]=kt[2*E+t]||MAXK;
+      if(pi>=0)for(let q2=k+1;q2<=B_KP;q2++)paths[pi+q2]=s;
+    }
+  }
+  return R0;
+}
+
+function betaRun(){
+  if(!bValidate())return;
+  $('overlay').classList.add('on');
+  setTimeout(()=>{
+    const t0=performance.now();
+    const p=JSON.parse(JSON.stringify(bs));Object.assign(p,{S:parseDate(bs.start),T:parseDate(bs.target),B:parseDate(bs.boost)});
+    const raw=betaSim(p,true),n=raw.n,E=p.epics.length;
+    const scen={};SC_ORDER.forEach(k=>{scen[k]=k===p.scen?stats(raw.kF):stats(betaSim(Object.assign({},p,{scen:k,iters:Math.min(p.iters,100000)}),false).kF);});
+    BR={p,raw,S:p.S,T:p.T,B:p.B,mS:raw.mS,scen,F:scen[p.scen],scope:stats(raw.scope),epM:stats(raw.epM),stM:stats(raw.stM),capM:stats(raw.capM),
+      NL:stats(raw.kNL),NB:stats(raw.kNB),N:stats(raw.kN),kMin:stats(raw.kX[0]),kMax:stats(raw.kX[1]),kQ15:stats(raw.kX[2]),kMid:stats(raw.kX[3]),kQ85:stats(raw.kX[4]),
+      kE:raw.kE.map(stats),tp:stats(p.tp)};
+    const mF=BR.F.mean;
+    BR.epSens=p.epics.map((e,i)=>({e:i,lo:(raw.sMin[i]/n-mF)*2,hi:(raw.sMax[i]/n-mF)*2,swing:(raw.sMax[i]-raw.sMin[i])/n*2}));
+    const f=BR.epSens.map(s=>({l:`Rozmiar Epika ${s.e+1} (${p.epics[s.e][0]}↔${p.epics[s.e][1]})`,r:[s.lo,s.hi],c:C.bL}));
+    f.push({l:`Zakres Epików P15↔P85 (${raw.sq.q15}↔${raw.sq.q85})`,r:[(BR.kQ15.mean-mF)*2,(BR.kQ85.mean-mF)*2],c:C.bD});
+    f.push({l:'Brak efektu uczenia',r:[0,(BR.NL.mean-mF)*2],c:C.a});
+    f.push({l:'Brak wzrostu od marca',r:[0,(BR.NB.mean-mF)*2],c:C.aL});
+    f.push({l:'Zmienność throughputu (P15↔P85)',r:[(BR.kMid.p15-BR.kMid.mean)*2,(BR.kMid.p85-BR.kMid.mean)*2],c:'#9cc7e6'});
+    BR.factors=f.sort((x,y)=>(y.r[1]-y.r[0])-(x.r[1]-x.r[0]));
+    const ratio=new Float64Array(n);for(let i=0;i<n;i++)ratio[i]=raw.capM[i]>0?raw.scope[i]/raw.capM[i]:Infinity;ratio.sort();
+    const rq=x=>ratio[Math.min(n-1,Math.ceil(x*n)-1)];
+    BR.alloc85=p.alloc*rq(.85);BR.alloc95=p.alloc*rq(.95);
+    BR.ms=performance.now()-t0;
+    betaRender();
+    $('overlay').classList.remove('on');
+    $('bRunInfo').textContent=`${ni(p.iters)} iteracji · ${ni(BR.ms)} ms · ${new Date().toLocaleTimeString('pl-PL')}`;
+  },30);
+}
+
+/* ---------- Beta: inputs ---------- */
+function bSchedule(){clearTimeout(bTimer);bTimer=setTimeout(betaRun,350);}
+function bRenderChips(){
+  const box=$('bTpChips');box.innerHTML='';
+  bs.tp.forEach((v,i)=>{
+    const c=document.createElement('div');c.className='chip';
+    c.innerHTML=`S${i+1}<input type="number" min="0" max="999" value="${v}" aria-label="Throughput okresu ${i+1}"><button title="Usuń">×</button>`;
+    c.querySelector('input').addEventListener('change',e=>{const x=parseInt(e.target.value,10);bs.tp[i]=isNaN(x)||x<0?0:x;e.target.value=bs.tp[i];bTpInfo();bSchedule();});
+    c.querySelector('button').addEventListener('click',()=>{if(bs.tp.length<=1)return;bs.tp.splice(i,1);bRenderChips();bSchedule();});
+    box.appendChild(c);
+  });
+  bTpInfo();
+}
+function bTpInfo(){const st=stats(bs.tp);$('bTpStats').textContent=`${spr(bs.tp.length)} · średnia ${nf(st.mean,2)} · mediana ${nf(st.p50,0)} · σ ${nf(st.sd,2)} · po alokacji ${bs.alloc}%: śr. ${nf(st.mean*bs.alloc/100,2)} hist./sprint`;}
+function bRenderEpics(){
+  $('bEpics').innerHTML=bs.epics.map((e,i)=>`<tr><td>Epik ${i+1}${i<2?'<span class="known" title="Zespół częściowo zna ten Epik">częściowo znany</span>':''}</td>
+    <td><input type="number" min="0" max="500" value="${e[0]}" data-i="${i}" data-j="0" aria-label="Epik ${i+1} min"></td>
+    <td><input type="number" min="0" max="500" value="${e[1]}" data-i="${i}" data-j="1" aria-label="Epik ${i+1} max"></td>
+    <td><button class="btn sm" data-del="${i}" title="Usuń Epik">×</button></td></tr>`).join('');
+  let a=0,b=0;bs.epics.forEach(e=>{a+=e[0];b+=e[1];});
+  $('bEpInfo').textContent=`${bs.epics.length} ${plural(bs.epics.length,'Epik','Epiki','Epików')} · łączny zakres ${a}–${b} historyjek (średnio ${nf((a+b)/2)})`;
+}
+function bValidate(){
+  const ok=bs.tp.length>0&&bs.tp.some(v=>v>0);
+  $('bTpErr').textContent=ok?'':'Lista throughputu musi zawierać co najmniej jedną wartość > 0.';
+  const ok2=bs.epics.length>0&&bs.epics.some(e=>e[1]>0);
+  $('bEpErr').textContent=ok2?'':'Dodaj co najmniej jeden Epik o rozmiarze > 0.';
+  return ok&&ok2;
+}
+function setScen(s){bs.scen=s;document.querySelectorAll('#bScen button').forEach(b=>b.classList.toggle('on',b.dataset.s===s));betaRun();}
+function bBind(){
+  $('bStart').addEventListener('change',e=>{if(e.target.value){bs.start=e.target.value;bSchedule();}});
+  $('bTarget').addEventListener('change',e=>{if(e.target.value){bs.target=e.target.value;bSchedule();}});
+  $('bBoost').addEventListener('change',e=>{if(e.target.value){bs.boost=e.target.value;bSchedule();}});
+  $('bIters').addEventListener('change',e=>{bs.iters=parseInt(e.target.value,10);bSchedule();});
+  const setA=v=>{v=Math.max(1,Math.min(100,parseInt(v,10)||1));bs.alloc=v;$('bAlloc').value=v;$('bAllocNum').value=v;$('bAllocVal').textContent=v;bTpInfo();bSchedule();};
+  $('bAlloc').addEventListener('input',e=>setA(e.target.value));
+  $('bAllocNum').addEventListener('change',e=>setA(e.target.value));
+  $('bTpAdd').addEventListener('click',()=>{bs.tp.push(Math.round(stats(bs.tp).p50));bRenderChips();bSchedule();});
+  $('bTpApply').addEventListener('click',()=>{
+    const v=$('bTpPaste').value.split(/[\s,;]+/).filter(Boolean).map(Number);
+    if(!v.length||v.some(x=>!Number.isInteger(x)||x<0)){$('bTpErr').textContent='Podaj nieujemne liczby całkowite oddzielone przecinkami.';return;}
+    bs.tp=v;$('bTpPaste').value='';bRenderChips();bSchedule();
+  });
+  $('bTpReset').addEventListener('click',()=>{bs.tp=BETA_DEF.tp.slice();bRenderChips();bSchedule();});
+  $('bEpics').addEventListener('change',e=>{
+    const t=e.target;if(t.dataset.i===undefined)return;
+    const i=+t.dataset.i,j=+t.dataset.j,v=Math.max(0,Math.min(500,parseInt(t.value,10)||0)),ep=bs.epics[i];
+    ep[j]=v;if(ep[0]>ep[1]){if(j===0)ep[1]=v;else ep[0]=v;}
+    bRenderEpics();bSchedule();
+  });
+  $('bEpics').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b||bs.epics.length<=1)return;bs.epics.splice(+b.dataset.del,1);bRenderEpics();bSchedule();});
+  $('bEpAdd').addEventListener('click',()=>{if(bs.epics.length>=20)return;bs.epics.push(bs.epics[bs.epics.length-1].slice());bRenderEpics();bSchedule();});
+  $('bEpReset').addEventListener('click',()=>{bs.epics=BETA_DEF.epics.map(e=>e.slice());bRenderEpics();bSchedule();});
+  $('bScen').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setScen(b.dataset.s);});
+  $('bScenTbl').addEventListener('click',e=>{const tr=e.target.closest('tr[data-s]');if(tr&&tr.dataset.s!==bs.scen)setScen(tr.dataset.s);});
+  $('bRunBtn').addEventListener('click',betaRun);
+  $('bCsvBtn').addEventListener('click',bExportCsv);
+  $('bCsvRawBtn').addEventListener('click',bExportRaw);
+}
+
+/* ---------- Beta: render ---------- */
+function bProb(st,date){return cdfAt(st,sprintsBy(BR.S,date));}
+function bMonthChecks(){
+  const out=[],s=new Date(BR.S),t=new Date(BR.T),tEnd=endOfMonth(t.getUTCFullYear(),t.getUTCMonth());
+  for(let i=0;i<48;i++){const d=endOfMonth(s.getUTCFullYear(),s.getUTCMonth()+i);if(d>tEnd)break;if(d>=BR.S)out.push(d);}
+  return out.slice(-4);
+}
+function betaRender(){
+  bRenderSummary();bRenderModel();bRenderTables();bRenderAnswers();bRenderMethod();
+  bChartCdf();bChartHist();bChartBurn();bChartTornado();bChartRiskP();bChartModel();
+}
+function bRenderSummary(){
+  const F=BR.F,E=BR.p.epics.length,pM=cdfAt(F,BR.mS),rk=bRisk(pM),sc=SCEN[BR.p.scen],em=BR.epM,sm=BR.stM,sp=BR.scope;
+  $('bSummaryDesc').innerHTML=`Start: <b>${fmt(BR.S)}</b> · termin biznesowy: <b>${fmt(BR.T)}</b> · ${E} ${plural(E,'Epik','Epiki','Epików')} (${BR.raw.sumMin}–${BR.raw.sumMax} historyjek) · alokacja <b>${BR.p.alloc}%</b> · scenariusz <b>${sc.name}</b> · ${ni(BR.p.iters)} iteracji Monte Carlo.`;
+  $('bVerdict').innerHTML=`<h3>Czy zdążymy ${deadlineTxt(BR.T)}?</h3>
+    <div class="verdict"><div class="light ${rk.cls}"><span>${rk.emo}</span><b>${pcs(pM)}</b></div>
+    <div><div class="verdict-ans ${rk.cls}">${rk.ans}</div>
+    <p class="verdict-txt">Prawdopodobieństwo ukończenia wszystkich ${epGen(E)} do ${fmt(BR.T)} wynosi <b>${pcs(pM)}</b>.</p>
+    <span class="risk-badge ${rk.badge}">${rk.lvl}</span>
+    <div class="hint" style="margin-top:10px">Rekomendowany termin do komunikacji (P85): <b>${fmt(bEnd(F.p85))}</b><br>Skala: ≥ 85% niskie · 50–85% średnie · &lt; 50% wysokie ryzyko · scenariusz ${sc.name}</div></div></div>`;
+  const tip={p50:'P50: w 50% symulacji wszystkie Epiki ukończono do tej daty lub wcześniej.',p85:'P85: w 85% symulacji wszystkie Epiki ukończono do tej daty lub wcześniej – rekomendowany poziom planowania.',p95:'P95: w 95% symulacji wszystkie Epiki ukończono do tej daty lub wcześniej – poziom dla zobowiązań krytycznych.'};
+  const dl=deadlineTxt(BR.T);
+  $('bTiles').innerHTML=['p50','p85','p95'].map(p=>tile('a sm'+(p==='p85'?' dark':''),`${p.toUpperCase()} – wszystkie Epiki`,fmt(bEnd(F[p])),`sprint ${F[p]} · ${F[p]*2} tyg. od startu`,tip[p])).join('')+
+    tile('b sm',`Epiki ${dl} (85%)`,`≥ ${em.p15} z ${E}`,`50%: ≥ ${em.p50} · 95%: ≥ ${em.p5}`,'Liczba Epików ukończonych co najmniej z pewnością 85% (15. percentyl rozkładu).')+
+    tile('b sm dark',`Historyjki ${dl} (85%)`,`≥ ${sm.p15}`,`50%: ≥ ${sm.p50} · 95%: ≥ ${sm.p5}`,'Liczba historyjek tej inicjatywy dostarczonych co najmniej z pewnością 85%.')+
+    tile('b sm','Zakres prac (P50)',hist(sp.p50),`P5–P95: ${sp.p5}–${sp.p95} · min–max: ${BR.raw.sumMin}–${BR.raw.sumMax}`,'Suma wylosowanych rozmiarów Epików – rozkład w symulacji.');
+  $('bScenTbl').innerHTML=`<thead><tr><th>Scenariusz</th><th>P50</th><th>P85</th><th>P95</th><th>Szansa ${dl}</th><th>Ryzyko</th></tr></thead><tbody>`+
+    SC_ORDER.map(k=>{const st=BR.scen[k],p=cdfAt(st,BR.mS),r=bRisk(p),act=k===BR.p.scen;
+      return `<tr data-s="${k}" class="${act?'hl':''}"><td>Scenariusz ${SCEN[k].name}${act?'<small>aktywny</small>':''}</td><td>${fmt(bEnd(st.p50))}</td><td>${fmt(bEnd(st.p85))}</td><td>${fmt(bEnd(st.p95))}</td>
+      <td>${pcs(p)}<span class="pbar"><i style="width:${p*100}%"></i></span></td><td><span class="risk-badge sm ${r.badge}">${r.emo} ${r.lvl}</span></td></tr>`;}).join('')+'</tbody>';
+}
+function bRenderModel(){
+  const sc=SCEN[BR.p.scen],a=BR.p.alloc/100,tpm=BR.tp.mean;
+  let bk=1;while(bk<MAXK&&bFrac(BR.S,BR.B,bk)<=0)bk++;
+  const fr=bFrac(BR.S,BR.B,bk),bkS=BR.S+14*(bk-1)*DAY;
+  $('bModelList').innerHTML=[
+    `<b>Alokacja ${BR.p.alloc}%:</b> wylosowany throughput sprintu × ${nf(a,2)} → średnio <b>${nf(tpm*a,2)}</b> historyjki/sprint zamiast ${nf(tpm,2)}.`,
+    `<b>Efekt uczenia:</b> sprinty 1–${sc.warm} bez zmian – zespół zna częściowo Epiki 1 i 2 i realizuje je w znanym kontekście. Od sprintu ${sc.warm+1} efektywność rośnie o <b>r</b> na sprint, gdzie r ~ U(${pct(sc.lLo)}, ${pct(sc.lHi)}) losowane w każdej iteracji (tempo uczenia się różni się między zespołami). Efekt wypłaszcza się na poziomie <b>+${pct(sc.lCap)}</b>.`,
+    `<b>Wzrost od ${fmt(BR.B)}:</b> koniec ferii, lepsza znajomość domeny i Epików. Wzrost g ~ U(${pct(sc.bLo)}, ${pct(sc.bHi)}) losowany w każdej iteracji (nie deterministycznie). Sprint ${bk} (${fmtS(bkS)}–${fmtS(bkS+13*DAY)}) liczony proporcjonalnie: ${nf(fr*100,0)}% dni po tej dacie.`,
+    `<b>Łączny limit:</b> mnożnik efektywności ≤ <b>${nf(sc.cap*100,0)}%</b> historycznego poziomu. Uczenie i wzrost od marca częściowo wynikają z tej samej przyczyny (znajomość domeny), więc limit chroni przed podwójnym liczeniem. Wzrost efektywności powyżej ok. 30–40% bez zmiany składu zespołu jest rzadko obserwowany.`,
+    `<b>Ryzyko zakłóceń:</b> w każdym sprincie z prawdopodobieństwem <b>${pct(sc.dP)}</b> przepustowość spada o 50% (choroby, incydenty, odciągnięcie do innych prac). Historia zawiera już typowe zakłócenia, więc jest to tylko dodatkowy bufor.`,
+    `<b>Rozmiary Epików:</b> każdy Epik losowany z U{min…max} w każdej iteracji; Epiki realizowane sekwencyjnie 1 → ${BR.p.epics.length}.`
+  ].map(t=>`<li>${t}</li>`).join('');
+  const cols=SC_ORDER.map(k=>({k,s:SCEN[k]})),hl=k=>k===BR.p.scen?' class="colhl"':'';
+  const row=(name,fn)=>`<tr><td>${name}</td>${cols.map(c=>`<td${hl(c.k)}>${fn(c.s)}</td>`).join('')}</tr>`;
+  $('bScenParams').innerHTML=`<thead><tr><th>Parametr modelu</th>${cols.map(c=>`<th${hl(c.k)}>${cap(c.s.name)}</th>`).join('')}</tr></thead><tbody>
+    ${row('Rozruch bez zmiany throughputu',s=>spr(s.warm))}
+    ${row('Tempo uczenia na sprint',s=>`${pct(s.lLo)}–${pct(s.lHi)}`)}
+    ${row('Maks. efekt uczenia',s=>'+'+pct(s.lCap))}
+    ${row('Wzrost od marca',s=>`+${pct(s.bLo)}–${pct(s.bHi)}`)}
+    ${row('Łączny limit efektywności',s=>'+'+nf((s.cap-1)*100,0)+'%')}
+    ${row('Ryzyko zakłócenia sprintu (−50%)',s=>pct(s.dP))}</tbody>`;
+}
+function bRenderTables(){
+  const S=BR.S,mL=deadlineTxt(BR.T);
+  const wk=(st,f)=>`${nf(st[f]*2,f==='mean'?1:0)} tyg.<small>${fmt(S+Math.round(st[f]*14-1)*DAY)}</small>`;
+  const rowK=(name,st)=>`<tr><td>${name}</td><td>${wk(st,'mean')}</td><td>${wk(st,'p50')}</td><td>${wk(st,'p85')}</td><td>${wk(st,'p95')}</td><td>${nf(st.sd*2)} tyg.</td></tr>`;
+  const rowV=(name,st,unit,d=1)=>`<tr><td>${name}</td><td>${nf(st.mean,d)} ${unit}</td><td>${nf(st.p50,d===2?2:0)} ${unit}</td><td>${nf(st.p85,d===2?2:0)} ${unit}</td><td>${nf(st.p95,d===2?2:0)} ${unit}</td><td>${nf(st.sd,d)} ${unit}</td></tr>`;
+  const rowI=(name,st,unit)=>`<tr><td>${name}<small>P85/P95 = pewność „co najmniej” (15. / 5. percentyl)</small></td><td>${nf(st.mean)} ${unit}</td><td>${Math.floor(st.p50)} ${unit}<small>≥ z pewnością 50%</small></td><td>≥ ${Math.floor(st.p15)} ${unit}<small>z pewnością 85%</small></td><td>≥ ${Math.floor(st.p5)} ${unit}<small>z pewnością 95%</small></td><td>${nf(st.sd)} ${unit}</td></tr>`;
+  $('bStatTbl').innerHTML=`<thead><tr><th>Wielkość</th><th>Średnia</th><th>Mediana (P50)</th><th>P85</th><th>P95</th><th>Odchylenie std.</th></tr></thead><tbody>
+    ${rowK(`Termin ukończenia wszystkich Epików – scenariusz ${SCEN[BR.p.scen].name}`,BR.F)}
+    ${rowV('Zakres prac (suma Epików)',BR.scope,'hist.')}
+    ${rowI('Epiki ukończone '+mL,BR.epM,'Epiki')}
+    ${rowI('Historyjki dostarczone '+mL,BR.stM,'hist.')}
+    ${rowI('Zdolność dostawcza '+mL+' (bez limitu zakresu)',BR.capM,'hist.')}
+    ${rowK('Termin – bez efektu uczenia',BR.NL)}
+    ${rowK('Termin – bez wzrostu od marca',BR.NB)}
+    ${rowK('Termin – tylko historia × alokacja',BR.N)}
+    ${rowV('Historyczny throughput (wejście, 100% czasu)',BR.tp,'hist./sprint',2)}</tbody>`;
+  const asked=bMonthChecks().map(iso),s=new Date(S);let rows='';
+  for(let i=0;i<12;i++){
+    const d=endOfMonth(s.getUTCFullYear(),s.getUTCMonth()+i);if(d<S)continue;
+    const hl=asked.includes(iso(d)),dd=new Date(d);
+    rows+=`<tr class="${hl?'hl':''}"><td>${cap(MONTHS_NOM[dd.getUTCMonth()])} ${dd.getUTCFullYear()}<small>do ${fmt(d)} · ${spr(sprintsBy(S,d))}${hl?' · pytanie biznesowe':''}</small></td>`+
+      SC_ORDER.map(k=>{const p=bProb(BR.scen[k],d);return `<td${k===BR.p.scen?' class="colhl"':''}>${pcs(p)}<span class="pbar${k==='real'?'':' b'}"><i style="width:${p*100}%"></i></span></td>`;}).join('')+'</tr>';
+  }
+  $('bProbTbl').innerHTML=`<thead><tr><th>Koniec miesiąca</th>${SC_ORDER.map(k=>`<th${k===BR.p.scen?' class="colhl"':''}>${cap(SCEN[k].name)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody>`;
+  let cum=0;
+  $('bEpicTbl').innerHTML=`<thead><tr><th>Epik</th><th>Rozmiar min–max</th><th>Skumulowany zakres (średnio)</th><th>P50</th><th>P85</th><th>P95</th><th>Szansa ${mL}</th><th>Wpływ na termin</th></tr></thead><tbody>`+
+    BR.p.epics.map((e,i)=>{cum+=(e[0]+e[1])/2;const st=BR.kE[i],p=cdfAt(st,BR.mS);
+      return `<tr><td>Epik ${i+1}${i<2?'<small>częściowo znany</small>':''}</td><td>${e[0]}–${e[1]}</td><td>${nf(cum)} hist.</td><td>${fmt(bEnd(st.p50))}</td><td>${fmt(bEnd(st.p85))}</td><td>${fmt(bEnd(st.p95))}</td><td>${pcs(p)}<span class="pbar"><i style="width:${p*100}%"></i></span></td><td>${nf(BR.epSens[i].swing)} tyg.<small>min ↔ max</small></td></tr>`;}).join('')+'</tbody>';
+}
+function bRenderAnswers(){
+  const F=BR.F,E=BR.p.epics.length,T=BR.T,mS=BR.mS,pM=cdfAt(F,mS),rk=bRisk(pM),dl=deadlineTxt(T),n=BR.raw.n,sc=SCEN[BR.p.scen];
+  const scopeTxt=`${BR.raw.sumMin}–${BR.raw.sumMax} historyjek`;
+  const qa=[];
+  qa.push(['1. Kiedy zostaną ukończone wszystkie Epiki?',[['50','p50'],['85','p85'],['95','p95']].map(([x,f])=>['ok',`<b>P${x}:</b> z ${x}% prawdopodobieństwem wszystkie Epiki (${scopeTxt}) zostaną ukończone do <b>${fmt(bEnd(F[f]))}</b> (sprint ${F[f]}, ${F[f]*2} tyg. od startu).`])]);
+  qa.push([`2. Jakie jest prawdopodobieństwo ukończenia wszystkich Epików do ${fmt(T)}?`,[[rk.cls==='ok'?'ok':'warn',`Prawdopodobieństwo ukończenia wszystkich ${epGen(E)} do ${fmt(T)} wynosi <b>${pcs(pM)}</b> → <b>${rk.lvl}</b>.`]]]);
+  qa.push(['3. Jakie jest prawdopodobieństwo ukończenia do końca kolejnych miesięcy?',bMonthChecks().map(d=>{const p=bProb(F,d);
+    return [p>=.85?'ok':'warn',`${cap(monthLabel(d))}: <b>${pcs(p)}</b>${p===0?' – nie wystąpiło w żadnej symulacji':''} (${bRisk(p).lvl.toLowerCase()}).`];})]);
+  const which=c=>c===0?'żaden Epik':c===1?'Epik 1':`Epiki 1–${c}`;
+  const em=BR.epM,ec=counts(BR.raw.epM,0,E);let mo=0;for(let i=0;i<=E;i++)if(ec[i]>ec[mo])mo=i;
+  qa.push([`4. Ile Epików zostanie ukończonych ${dl}?`,[['50','p50'],['85','p15'],['95','p5']].map(([x,f])=>[em[f]>=E?'ok':'warn',`<b>P${x}:</b> co najmniej <b>${em[f]} z ${E}</b> Epików (${which(em[f])}).`])
+    .concat([['ok',`Najbardziej prawdopodobny wynik: <b>${mo} z ${E}</b> Epików (${pc(ec[mo]/n,0)} symulacji).`]])]);
+  const sm=BR.stM,scn=counts(BR.raw.stM,0,sm.max);let smo=0;for(let i=0;i<scn.length;i++)if(scn[i]>scn[smo])smo=i;
+  const cp=BR.capM,sp=BR.scope;
+  qa.push([`5. Ile historyjek zostanie dostarczonych ${dl}?`,[['50','p50'],['85','p15'],['95','p5']].map(([x,f])=>['ok',`<b>P${x}:</b> co najmniej <b>${hist(sm[f])}</b> z tej inicjatywy.`])
+    .concat([['ok',`Najbardziej prawdopodobna liczba (moda): <b>${hist(smo)}</b> (${pc(scn[smo]/n,0)} symulacji) przy zakresie P50 ${sp.p50}, P95 ${sp.p95}.`],
+      [cp.p15>=sp.p95?'ok':'warn',`Zdolność dostawcza do tego dnia (bez ograniczenia zakresem): P50 ≈ ${Math.floor(cp.p50)}, z pewnością 85% ≥ ${Math.floor(cp.p15)} historyjek – ${cp.p15>=sp.p95?'pokrywa nawet pesymistyczny zakres (P95)':cp.p15>=sp.p50?'pokrywa typowy zakres, ale nie wariant pesymistyczny':'nie pokrywa typowego zakresu'}.`]])]);
+  const c=[];
+  c.push([rk.cls==='ok'?'ok':'warn',`Przy obecnych założeniach (scenariusz ${sc.name}) ryzyko niedostarczenia wszystkich Epików ${dl} jest <b>${rk.low}</b> – szansa dotrzymania terminu wynosi ${pcs(pM)}.`]);
+  const p85d=bEnd(F.p85),buf=Math.round((T-p85d)/(7*DAY));
+  c.push([buf>=0?'ok':'warn',buf>=0?`Z 85% prawdopodobieństwem wszystkie Epiki zostaną ukończone do <b>${fmt(p85d)}</b> – ${buf} tyg. przed terminem biznesowym (bufor bezpieczeństwa).`:`Termin P85 (${fmt(p85d)}) przekracza termin biznesowy o <b>${-buf} tyg.</b>`]);
+  if(E>=2){const es=BR.epSens.slice().sort((a,b)=>b.swing-a.swing);
+    c.push(['ok',`Największym źródłem niepewności jest rozmiar Epików <b>${es[0].e+1} i ${es[1].e+1}</b>: różnica między ich minimalnym a maksymalnym rozmiarem przesuwa termin średnio o ${nf(es[0].swing)} i ${nf(es[1].swing)} tyg. Doprecyzowanie (refinement) tych Epików najbardziej zawęzi prognozę.`]);}
+  const top=BR.factors[0];
+  c.push(['ok',`Spośród wszystkich czynników ryzyka największy wpływ na termin ma: <b>${top.l.charAt(0).toLowerCase()+top.l.slice(1)}</b> (rozpiętość ${nf(top.r[1]-top.r[0])} tyg.).`]);
+  const dL=(BR.NL.mean-F.mean)*2,dB=(BR.NB.mean-F.mean)*2;
+  c.push(['ok',`Efekt uczenia skraca realizację średnio o ${nf(dL)} tyg.; bez niego szansa ${dl} wyniosłaby ${pcs(cdfAt(BR.NL,mS))}.`]);
+  c.push(['ok',`Wzrost przepustowości od ${fmt(BR.B)} skraca realizację średnio o ${nf(dB)} tyg.; bez niego szansa wyniosłaby ${pcs(cdfAt(BR.NB,mS))}.`]);
+  const pC=cdfAt(BR.scen.cons,mS),pO=cdfAt(BR.scen.opt,mS);
+  c.push([pC>=.85?'ok':'warn',`W zależności od scenariusza szansa ${dl} wynosi od ${pcs(pC)} (konserwatywny) do ${pcs(pO)} (optymistyczny)${pC>=.85?' – wynik jest odporny na założenia.':'.'}`]);
+  const a85=BR.alloc85,al=BR.p.alloc;
+  if(!isFinite(a85)||a85>100)c.push(['warn',`Nawet przy 100% alokacji zespołu nie osiągniemy 85% pewności – konieczna jest redukcja zakresu: z pewnością 85% ${dl} zmieści się ${which(em.p15)}.`]);
+  else if(Math.ceil(a85)<=al)c.push(['ok',`Minimalna alokacja zapewniająca 85% pewności dotrzymania terminu to ok. <b>${Math.ceil(a85)}%</b> (obecnie ${al}%) – zapas ${al-Math.ceil(a85)} pp.`]);
+  else c.push(['warn',`Aby osiągnąć 85% pewności, alokację trzeba zwiększyć z ${al}% do ok. <b>${Math.ceil(a85)}%</b> lub ograniczyć zakres do ${which(em.p15)}.`]);
+  c.push(['ok',`Rekomendacja: komunikuj sponsorowi termin <b>${fmt(p85d)}</b> (P85); wewnętrzny cel zespołu: ${fmt(bEnd(F.p50))} (P50); zobowiązanie krytyczne: ${fmt(bEnd(F.p95))} (P95).`]);
+  const w=[],tp=BR.tp,nS=BR.p.tp.length,cv=tp.sd/tp.mean,pN=cdfAt(BR.N,mS);
+  if(nS<10)w.push(['',`⚠️ Mała próbka historyczna (${spr(nS)}) – percentyle mogą się zmienić po kolejnych sprintach; aktualizuj prognozę co sprint.`]);
+  if(cv>.3)w.push(['',`⚠️ Wysoka zmienność throughputu (współczynnik zmienności ${pc(cv,0)}, zakres ${tp.min}–${tp.max}).`]);
+  if(pM-pN>.1)w.push(['',`⚠️ Wynik zależy od założeń o uczeniu i wzroście od marca: przy samym historycznym throughpucie × ${al}% szansa wynosi ${pcs(pN)}. Jeśli w marcu throughput nie wzrośnie – zaktualizuj prognozę.`]);
+  w.push(['',`⚠️ Alokacja ${al}% to kluczowe założenie – każde odciągnięcie zespołu do innych prac bezpośrednio wydłuża termin.`]);
+  w.push(['info',`ℹ️ Epiki 3–${E} są słabiej poznane – jeśli po refinemencie okażą się większe niż szacowane maksimum, prognoza jest nieaktualna.`]);
+  w.push(['info',`ℹ️ Okres świąteczno-noworoczny i ferie nie są modelowane osobno (zawiera je historia i ryzyko zakłóceń); w razie wątpliwości użyj scenariusza konserwatywnego.`]);
+  BR.ans={qa,c,w};
+  $('bQA').innerHTML=`<div class="qa-grid">${qa.map(([q,items])=>`<div class="qa"><div class="q">${q}</div><ul>${items.map(li).join('')}</ul></div>`).join('')}</div>`;
+  $('bConcl').innerHTML=c.map(li).join('');
+  $('bWarn').innerHTML=w.map(([t,h])=>`<li class="${t}">${h}</li>`).join('');
+}
+function bRenderMethod(){
+  const sc=SCEN[BR.p.scen];
+  $('bMethodList').innerHTML=[
+    `Każda z ${ni(BR.p.iters)} iteracji: (1) losuje rozmiar każdego Epika z U{min…max} i sumuje je w zakres; (2) losuje tempo uczenia r i wzrost od marca g; (3) dla kolejnych sprintów losuje (ze zwracaniem) throughput z listy ${BR.p.tp.join(', ')}, mnoży go przez alokację ${BR.p.alloc}% i mnożnik efektywności, aż skumulowany postęp osiągnie zakres.`,
+    `Mnożnik efektywności sprintu k = min(${nf(sc.cap,2)}; [1 + min(${pct(sc.lCap)}; r·max(0; k − ${sc.warm}))] · [1 + g·f<sub>k</sub>]), gdzie f<sub>k</sub> to udział dni sprintu po ${fmt(BR.B)}.`,
+    `Sprint trwa 14 dni; sprint 1 zaczyna się ${fmt(BR.S)}. Datą ukończenia jest ostatni dzień sprintu, w którym skumulowany postęp osiągnął zakres. Do ${fmt(BR.T)} mieści się ${spr(BR.mS)}.`,
+    `Wyniki „do dnia X” uwzględniają tylko pełne sprinty zakończone do tego dnia – podejście konserwatywne.`,
+    `Percentyle liczone metodą najbliższej rangi z pełnego rozkładu. Dla dat P85 = 85. percentyl; dla liczby Epików/historyjek pewność 85% = 15. percentyl („co najmniej”).`,
+    `Tornado: średnia zmiana terminu w tej samej iteracji (common random numbers) – Epik ustawiony na min vs max przy losowych pozostałych; zakres P15↔P85; wyłączenie uczenia lub wzrostu od marca; zmienność throughputu przy stałym zakresie.`,
+    `Minimalna alokacja dla 85% pewności: 85. percentyl ilorazu zakres / zdolność dostawcza do terminu, przemnożony przez obecną alokację (zdolność skaluje się liniowo z alokacją).`,
+    `Scenariusze nieaktywne liczone na ${ni(Math.min(BR.p.iters,100000))} iteracjach (tylko termin ukończenia).`
+  ].map(t=>`<li>${t}</li>`).join('');
+}
+
+/* ---------- Beta: charts ---------- */
+const bLbl=k=>k<=0?fmtS(BR.S):fmtS(bEnd(k));
+function bChartCdf(){
+  const all=SC_ORDER.map(k=>BR.scen[k]),lo=Math.max(1,Math.min(...all.map(s=>s.min))-1),hi=Math.max(...all.map(s=>s.max),BR.mS),ks=[];
+  for(let k=lo;k<=hi;k++)ks.push(k);
+  const col={cons:'#9bbfa9',real:'#5bb77f',opt:'#4fb3a9'};
+  const ds=SC_ORDER.map(k=>{const act=k===BR.p.scen;return {label:`Scenariusz ${SCEN[k].name}${act?' (aktywny)':''}`,data:ks.map(x=>cdfAt(BR.scen[k],x)*100),
+    borderColor:act?C.aD:col[k],backgroundColor:act?'rgba(46,158,91,.10)':'transparent',fill:act,borderWidth:act?3:1.6,borderDash:act?[]:[5,4],pointRadius:act?3:0,pointHoverRadius:5,tension:.25,order:act?0:1};});
+  const F=BR.F;
+  mk('bCdf',{type:'line',data:{labels:ks.map(bLbl),datasets:ds},
+    options:{interaction:{mode:'index',intersect:false},
+      scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'},title:{display:true,text:'Prawdopodobieństwo ukończenia wszystkich Epików'}},x:{title:{display:true,text:'Data końca sprintu'},grid:{display:false}}},
+      plugins:{tooltip:{callbacks:{title:i=>`Do ${fmt(bEnd(ks[i[0].dataIndex]))} (sprint ${ks[i[0].dataIndex]})`,label:i=>` ${i.dataset.label}: ${nf(i.raw)}%`}},
+        refLines:{h:[{y:50,color:C.p50,label:'50%'},{y:85,color:C.p85,label:'85%'},{y:95,color:C.p95,label:'95%'}],
+          v:[{x:ks.indexOf(BR.mS),color:'#6b5bb5',label:'Termin: '+fmtS(BR.T),dash:[]},{x:ks.indexOf(F.p85),color:C.aD,label:'P85: '+fmtS(bEnd(F.p85)),dash:[2,3]}]}}}});
+}
+function bChartHist(){
+  const st=BR.F,ks=[];for(let k=st.min;k<=st.max;k++)ks.push(k);
+  const c=counts(BR.raw.kF,ks[0],ks[ks.length-1]);
+  const cols=ks.map(k=>k<=st.p50?C.a:k<=st.p85?C.aL:k<=st.p95?'#c7ead3':C.grey);
+  mk('bHist',{type:'bar',data:{labels:ks.map(bLbl),datasets:[{label:'% symulacji',data:Array.from(c,v=>v/st.n*100),backgroundColor:cols,borderRadius:6,borderSkipped:false}]},
+    options:{plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>`${fmt(bEnd(ks[i[0].dataIndex]))} · sprint ${ks[i[0].dataIndex]}`,label:i=>` ${nf(i.raw,2)}% symulacji (${ni(c[i.dataIndex])})`}},
+      refLines:{v:['p50','p85','p95'].map(p=>({x:st[p]-ks[0],color:C[p],label:`${p.toUpperCase()}: ${fmtS(bEnd(st[p]))}`})).concat([{x:BR.mS-ks[0],color:'#6b5bb5',label:'Termin',dash:[]}])}},
+      scales:{y:{ticks:{callback:v=>v+'%'},title:{display:true,text:'% symulacji'}},x:{grid:{display:false}}}}});
+}
+function bChartBurn(){
+  const r=BR.raw,pn=r.pn,W=B_KP+1,K=Math.min(B_KP,Math.max(BR.F.p95+2,BR.mS+1)),ks=[];for(let k=0;k<=K;k++)ks.push(k);
+  const Q={p5:[],p15:[],p50:[],p85:[],p95:[]},col=new Float32Array(pn);
+  ks.forEach(k=>{for(let i=0;i<pn;i++)col[i]=r.paths[i*W+k];col.sort();const g=p=>col[Math.min(pn-1,Math.max(0,Math.ceil(p*pn)-1))];
+    Q.p5.push(g(.05));Q.p15.push(g(.15));Q.p50.push(g(.5));Q.p85.push(g(.85));Q.p95.push(g(.95));});
+  const sp=BR.scope,flat=v=>ks.map(()=>v),line={pointRadius:0,fill:false,tension:.2};
+  const ds=[
+    {...line,label:'Zakres P95',data:flat(sp.p95),borderColor:'rgba(19,133,127,.6)',borderDash:[6,4],borderWidth:1.5,hide:true},
+    {...line,label:`Zakres Epików P5–P95 (${sp.p5}–${sp.p95})`,data:flat(sp.p5),borderColor:'rgba(19,133,127,.6)',borderDash:[6,4],borderWidth:1.5,backgroundColor:'rgba(42,157,151,.08)',fill:0},
+    {...line,label:`Zakres P50 (${sp.p50})`,data:flat(sp.p50),borderColor:C.bD,borderWidth:2},
+    {...line,label:'Postęp P95',data:Q.p95,borderWidth:0,hide:true},
+    {...line,label:'Postęp P5–P95',data:Q.p5,borderWidth:0,backgroundColor:'rgba(91,183,127,.16)',fill:3},
+    {...line,label:'Postęp P85',data:Q.p85,borderWidth:0,hide:true},
+    {...line,label:'Postęp P15–P85',data:Q.p15,borderWidth:0,backgroundColor:'rgba(46,158,91,.26)',fill:5},
+    {...line,label:'Postęp – mediana',data:Q.p50,borderColor:C.aD,borderWidth:3,pointRadius:2}];
+  for(let i=0;i<Math.min(25,pn);i++)ds.push({...line,label:'_path',data:ks.map(k=>r.paths[i*W+k]),borderColor:'rgba(16,124,65,.14)',borderWidth:1,hide:true,tension:0});
+  let cum=0;const eh=BR.p.epics.slice(0,-1).map((e,i)=>{cum+=(e[0]+e[1])/2;return {y:cum,color:'#9aa9a0',label:'E'+(i+1)};});
+  mk('bBurn',{type:'line',data:{labels:ks.map(bLbl),datasets:ds},
+    options:{interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{filter:(l,d)=>!d.datasets[l.datasetIndex].hide}},
+        tooltip:{filter:i=>!i.dataset.hide,callbacks:{title:i=>{const k=ks[i[0].dataIndex];return k?`Sprint ${k} · ${fmt(bEnd(k))}`:`Start · ${fmt(BR.S)}`;},label:i=>` ${i.dataset.label.split(' (')[0]}: ${nf(i.raw,1)} hist.`}},
+        refLines:{h:eh,v:BR.mS<=K?[{x:BR.mS,color:'#6b5bb5',label:'Termin: '+fmtS(BR.T),dash:[]}]:[]}},
+      scales:{y:{beginAtZero:true,title:{display:true,text:'Historyjki (skumulowane)'}},x:{grid:{display:false},title:{display:true,text:'Koniec sprintu'}}}}});
+}
+function bChartTornado(){
+  const it=BR.factors;
+  $('bTornadoDesc').textContent=`Średnia zmiana terminu (tygodnie) względem bazowej prognozy (średnio ${nf(BR.F.mean*2)} tyg. od startu).`;
+  mk('bTornado',{type:'bar',data:{labels:it.map(i=>i.l),datasets:[{data:it.map(i=>Math.abs(i.r[1]-i.r[0])<.05?[i.r[0]-.05,i.r[1]+.05]:i.r),backgroundColor:it.map(i=>i.c),borderRadius:6,borderSkipped:false,barPercentage:.62}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:i=>{const r=it[i.dataIndex].r,s=v=>(v>=0?'+':'')+nf(v);return ` ${s(r[0])} do ${s(r[1])} tyg. (rozpiętość ${nf(r[1]-r[0])} tyg.)`;}}},
+      refLines:{v:[{x:0,color:C.p50,label:'Baza',dash:[]}]}},
+      scales:{x:{title:{display:true,text:'Zmiana terminu [tygodnie]'},ticks:{callback:v=>(v>0?'+':'')+v}},y:{grid:{display:false}}}}});
+}
+function bChartRiskP(){
+  const mS=BR.mS,v=[['Pełny model',BR.F],['Bez wzrostu od marca',BR.NB],['Bez efektu uczenia',BR.NL],['Tylko historia × alokacja',BR.N],
+    [`Epiki = min (${BR.raw.sumMin})`,BR.kMin],[`Epiki = max (${BR.raw.sumMax})`,BR.kMax]];
+  $('bRiskDesc').textContent=`Termin P50 i P85 (tygodnie od startu) po wyłączeniu poszczególnych założeń; w podpowiedzi – szansa dotrzymania terminu ${fmt(BR.T)}.`;
+  const wDate=w=>fmt(BR.S+(w*7-1)*DAY);
+  mk('bRiskP',{type:'bar',data:{labels:v.map(x=>x[0]),datasets:[
+      {label:'P50',data:v.map(x=>x[1].p50*2),backgroundColor:C.aL,borderRadius:7},
+      {label:'P85',data:v.map(x=>x[1].p85*2),backgroundColor:v.map(x=>x[1].p85<=mS?C.a:x[1].p50<=mS?'#f2cf5b':'#eb9a91'),borderRadius:7}]},
+    options:{plugins:{tooltip:{callbacks:{label:i=>` ${i.dataset.label}: ${i.raw} tyg. → ${wDate(i.raw)}`,afterBody:i=>{const p=cdfAt(v[i[0].dataIndex][1],mS);return `Szansa ${deadlineTxt(BR.T)}: ${pcs(p)} (${bRisk(p).lvl})`;}}},
+      refLines:{h:[{y:mS*2,color:'#6b5bb5',label:'Termin biznesowy: '+fmtS(BR.T)}]}},
+      scales:{y:{beginAtZero:true,suggestedMax:mS*2+4,title:{display:true,text:'Tygodnie od startu'}},x:{grid:{display:false},ticks:{autoSkip:false,maxRotation:30,minRotation:0}}}}});
+}
+function bChartModel(){
+  const sc=SCEN[BR.p.scen],K=Math.max(16,Math.min(B_KP,BR.F.p95+1)),ks=[];for(let k=1;k<=K;k++)ks.push(k);
+  const f=k=>bFrac(BR.S,BR.B,k),rm=(sc.lLo+sc.lHi)/2,bm=(sc.bLo+sc.bHi)/2,eff=BR.tp.mean*BR.p.alloc/100;
+  const lo=ks.map(k=>bMult(sc,sc.lLo,sc.bLo,f(k),k)*100),hi=ks.map(k=>bMult(sc,sc.lHi,sc.bHi,f(k),k)*100),
+    mid=ks.map(k=>bMult(sc,rm,bm,f(k),k)*100),learn=ks.map(k=>bMult(sc,rm,0,0,k)*100);
+  const bk=ks.find(k=>f(k)>0),line={pointRadius:0,fill:false,tension:.15};
+  mk('bModelChart',{type:'line',data:{labels:ks.map(k=>`S${k} · ${fmtS(bEnd(k))}`),datasets:[
+    {...line,label:'Maksimum',data:hi,borderColor:'rgba(46,158,91,.35)',borderWidth:1,hide:true},
+    {...line,label:'Zakres możliwych wartości',data:lo,borderColor:'rgba(46,158,91,.35)',borderWidth:1,backgroundColor:'rgba(91,183,127,.16)',fill:0},
+    {...line,label:'Łącznie (środek rozkładu)',data:mid,borderColor:C.aD,borderWidth:3,pointRadius:3},
+    {...line,label:'Sam efekt uczenia',data:learn,borderColor:C.bD,borderDash:[5,4],borderWidth:2}]},
+    options:{interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{filter:(l,d)=>!d.datasets[l.datasetIndex].hide}},
+        tooltip:{callbacks:{title:i=>`Sprint ${ks[i[0].dataIndex]} · do ${fmt(bEnd(ks[i[0].dataIndex]))}`,label:i=>` ${i.dataset.label}: ${nf(i.raw)}% (≈ ${nf(eff*i.raw/100,2)} hist./sprint)`}},
+        refLines:{v:bk?[{x:bk-1,color:C.p85,label:'Od '+fmtS(BR.B)+': wzrost',dash:[4,4]}]:[],h:[{y:100,color:'#9aa9a0',label:'Poziom historyczny'}]}},
+      scales:{y:{suggestedMin:95,ticks:{callback:v=>v+'%'},title:{display:true,text:'% historycznej efektywności'}},x:{grid:{display:false},ticks:{maxRotation:45,minRotation:30}}}}});
+}
+
+/* ---------- Beta: CSV ---------- */
+function bExportCsv(){
+  if(!BR)return;const L=[],row=(...a)=>L.push(a.map(q).join(';')),F=BR.F,strip=h=>h.replace(/<[^>]+>/g,'');
+  row('Monte Carlo Forecast – zespół Beta');row('Start',iso(BR.S));row('Termin biznesowy',iso(BR.T));row('Wzrost przepustowości od',iso(BR.B));
+  row('Throughput',BR.p.tp.join(','));row('Alokacja [%]',BR.p.alloc);row('Iteracje',BR.p.iters);row('Scenariusz',SCEN[BR.p.scen].name);
+  row('');row('Epik','Min','Max');BR.p.epics.forEach((e,i)=>row('Epik '+(i+1),e[0],e[1]));
+  row('');row('Termin ukończenia','Średnia [tyg.]','Mediana [tyg.]','P85 [tyg.]','P95 [tyg.]','Odch. std [tyg.]','Data P50','Data P85','Data P95',`Szansa do ${iso(BR.T)}`);
+  const rk=(name,s)=>row(name,n2(s.mean*2),s.p50*2,s.p85*2,s.p95*2,n2(s.sd*2),iso(bEnd(s.p50)),iso(bEnd(s.p85)),iso(bEnd(s.p95)),n2(cdfAt(s,BR.mS)*100)+'%');
+  rk('Wszystkie Epiki',F);BR.kE.forEach((s,i)=>rk('Epik '+(i+1),s));
+  row('');row('Do '+iso(BR.T),'Średnia','Mediana','Co najmniej (85%)','Co najmniej (95%)','Odch. std');
+  [['Epiki',BR.epM],['Historyjki',BR.stM],['Zdolność dostawcza',BR.capM],['Zakres prac (całość)',BR.scope]].forEach(([nm,s])=>row(nm,n2(s.mean),Math.floor(s.p50),Math.floor(s.p15),Math.floor(s.p5),n2(s.sd)));
+  row('');row('Prawdopodobieństwo do','Data',...SC_ORDER.map(k=>SCEN[k].name));
+  const s=new Date(BR.S);for(let i=0;i<12;i++){const d=endOfMonth(s.getUTCFullYear(),s.getUTCMonth()+i);if(d<BR.S)continue;row(MONTHS_NOM[new Date(d).getUTCMonth()]+' '+new Date(d).getUTCFullYear(),iso(d),...SC_ORDER.map(k=>n2(bProb(BR.scen[k],d)*100,2)+'%'));}
+  row('');row('Czynnik ryzyka','Zmiana od [tyg.]','Zmiana do [tyg.]');BR.factors.forEach(f=>row(f.l,n2(f.r[0]),n2(f.r[1])));
+  row('');row('Odpowiedzi dla biznesu');
+  BR.ans.qa.forEach(([qq,items])=>items.forEach(x=>row(qq,strip(x[1]))));
+  BR.ans.c.forEach(x=>row('Wniosek',strip(x[1])));BR.ans.w.forEach(x=>row('Ostrzeżenie',strip(x[1])));
+  download('monte-carlo-beta-wyniki.csv',L.join('\r\n'));
+}
+function bExportRaw(){
+  if(!BR)return;const r=BR.raw,L=['iteracja;zakres_historyjek;sprinty;data_ukonczenia;epiki_do_terminu;historyjki_do_terminu;zdolnosc_do_terminu'];
+  for(let i=0;i<r.n;i++)L.push(`${i+1};${r.scope[i]};${r.kF[i]};${iso(bEnd(r.kF[i]))};${r.epM[i]};${r.stM[i]};${n2(r.capM[i])}`);
+  download('monte-carlo-beta-iteracje.csv',L.join('\r\n'));
+}
+
+/* ---------- tabs ---------- */
+function showTab(t){
+  document.querySelectorAll('.tab').forEach(b=>{const on=b.dataset.tab===t;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);});
+  document.querySelectorAll('[data-pane]').forEach(e=>e.hidden=e.dataset.pane!==t);
+  if(location.hash!=='#'+t)history.replaceState(null,'','#'+t);
+  if(t==='beta'&&!BR)betaRun();
+  requestAnimationFrame(()=>Object.values(charts).forEach(c=>c.resize()));
+}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{showTab(b.dataset.tab);window.scrollTo(0,0);}));
+bRenderChips();bRenderEpics();bBind();
+(()=>{const h=location.hash.slice(1),el=h&&document.getElementById(h);showTab(h==='beta'||(el&&el.closest('#tabBeta'))?'beta':'alpha');})();
 </script>
 </body>
 </html>
