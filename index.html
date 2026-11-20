@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Monte Carlo Forecast – zespoły Alpha i Beta</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
   --bg:#f3f8f4; --card:#ffffff; --g900:#0b4f2a; --g700:#107c41; --g600:#1e8e4e; --g500:#2e9e5b; --g400:#5bb77f;
@@ -182,6 +183,21 @@ td.colhl,th.colhl{background:var(--g50);font-weight:600;color:var(--g900)}
 .qa-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 22px}
 @media(max-width:900px){.qa-grid{grid-template-columns:1fr}}
 .qa .q{font-weight:650;color:var(--g900);margin:12px 0 4px}
+/* Shared scenarios */
+.scn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.scn-row select{width:auto;min-width:240px;flex:1 1 300px}
+.scn-row input[type=text]{width:auto;flex:1 1 260px}
+.scn-row input.scn-author{flex:0 1 220px}
+.scn-status{margin-top:10px;font-size:13px;color:var(--muted)}
+.scn-alert{margin-top:8px;padding:8px 12px;border-radius:10px;background:var(--azure100);border:1px solid #cfe3f3;color:var(--text);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.scn-alert.warn{background:var(--amber100);border-color:#f4e0b6}
+.live{font-size:11.5px;font-weight:600;padding:2px 10px;border-radius:999px;background:var(--g100);color:var(--g700)}
+.live.off{background:#eef2ef;color:var(--muted)}
+.dirty{color:var(--amber);font-weight:600}
+.scn-msg{font-weight:600;color:var(--g700)}
+.scn-msg.err{color:#b0433a}
+.btn.danger:hover{background:#fdecea;border-color:#f1b9b2;color:#b0433a}
+.btn:disabled{opacity:.5;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -218,11 +234,11 @@ td.colhl,th.colhl{background:var(--g50);font-weight:600;color:var(--g900)}
     <button class="tab" role="tab" data-tab="beta" aria-selected="false">Prognoza - zespół Beta</button>
   </nav>
   <nav class="toc" data-pane="beta" hidden>
-    <a href="#bParams">Parametry</a><a href="#bSummary">Executive Summary</a><a href="#bModel">Model uczenia i wzrostu</a>
+    <a href="#scn-beta">Zapisane scenariusze</a><a href="#bParams">Parametry</a><a href="#bSummary">Executive Summary</a><a href="#bModel">Model uczenia i wzrostu</a>
     <a href="#bCharts">Wykresy</a><a href="#bRisk">Ryzyko</a><a href="#bTables">Statystyki</a><a href="#bAnswers">Odpowiedzi dla biznesu</a><a href="#bMethod">Metodologia</a>
   </nav>
   <nav class="toc" data-pane="alpha">
-    <a href="#params">Parametry</a><a href="#summary">Executive Summary</a><a href="#answers">Odpowiedzi dla biznesu</a>
+    <a href="#scn-alpha">Zapisane scenariusze</a><a href="#params">Parametry</a><a href="#summary">Executive Summary</a><a href="#answers">Odpowiedzi dla biznesu</a>
     <a href="#manager">Interpretacja dla managera</a><a href="#charts">Wykresy</a><a href="#compare">Porównanie A vs B</a>
     <a href="#risk">Ryzyko</a><a href="#tables">Statystyki</a><a href="#method">Metodologia</a>
   </nav>
@@ -230,7 +246,8 @@ td.colhl,th.colhl{background:var(--g50);font-weight:600;color:var(--g900)}
 
 <main id="tabAlpha" data-pane="alpha">
   <!-- PARAMETERS -->
-  <section id="params" class="card" style="margin-top:0">
+  <section id="scn-alpha" class="card scn" data-team="alpha" style="margin-top:0"></section>
+  <section id="params" class="card">
     <h2>Parametry symulacji</h2>
     <p class="desc">Zmiana dowolnego parametru automatycznie przelicza prognozę.</p>
     <div class="controls">
@@ -414,7 +431,8 @@ td.colhl,th.colhl{background:var(--g50);font-weight:600;color:var(--g900)}
 
 <!-- ======================= ZESPÓŁ BETA ======================= -->
 <main id="tabBeta" data-pane="beta" hidden>
-  <section id="bParams" class="card" style="margin-top:0">
+  <section id="scn-beta" class="card scn" data-team="beta" style="margin-top:0"></section>
+  <section id="bParams" class="card">
     <h2>Parametry – zespół Beta</h2>
     <p class="desc">Prognoza dostarczenia pozostałych Epików. Zmiana dowolnego parametru lub scenariusza automatycznie przelicza wszystkie wyniki i wykresy.</p>
     <div class="controls bcontrols">
@@ -726,6 +744,7 @@ function render(){
   $('summaryDesc').innerHTML=`Start: <b>${fmt(R.S)}</b> · backlog: <b>${N}</b> el. · scenariusz B: +${R.params.gMin}–${R.params.gMax}% (średnio ${nf(R.scope.mean)} el.) · ${ni(R.params.iters)} iteracji Monte Carlo.`;
   renderTiles(); renderAnswers(); renderManager(); renderTables(); renderMethod();
   chartCdf(); chartHist(); chartItems(); chartCmp(); chartTornado(); chartWaterfall();
+  scnStatus('alpha');
 }
 function tile(cls,k,v,s,tip){return `<div class="tile ${cls}"><div class="k">${k}${tip?` <span class="tip" tabindex="0" data-tip="${tip}">?</span>`:''}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;}
 const TIPS={p50:'P50: w 50% symulacji backlog ukończono do tej daty lub wcześniej.',p85:'P85: w 85% symulacji backlog ukończono do tej daty lub wcześniej – rekomendowany poziom planowania.',p95:'P95: w 95% symulacji backlog ukończono do tej daty lub wcześniej – poziom dla zobowiązań.',it:'Liczba elementów, którą zespół dostarczy co najmniej z pewnością 85% (15. percentyl rozkładu).'};
@@ -1162,6 +1181,7 @@ function bMonthChecks(){
 function betaRender(){
   bRenderSummary();bRenderModel();bRenderTables();bRenderAnswers();bRenderMethod();
   bChartCdf();bChartHist();bChartBurn();bChartTornado();bChartRiskP();bChartModel();
+  scnStatus('beta');
 }
 function bRenderSummary(){
   const F=BR.F,E=BR.p.epics.length,pM=cdfAt(F,BR.mS),rk=bRisk(pM),sc=SCEN[BR.p.scen],em=BR.epM,sm=BR.stM,sp=BR.scope;
@@ -1417,6 +1437,161 @@ function showTab(t){
 }
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{showTab(b.dataset.tab);window.scrollTo(0,0);}));
 bRenderChips();bRenderEpics();bBind();
+
+/* =================== WSPÓLNE SCENARIUSZE (Supabase) =================== */
+const SB_URL='https://zqbiuneifbmgirudsyrw.supabase.co';
+const SB_KEY='sb_publishable_nbv1dCZGZLvfzUJ4MO13sA_zDqQRNmi'; // publiczny klucz – dostęp kontrolują reguły RLS w bazie
+const SB_TABLE='mc_scenarios';
+const TEAM_NAME={alpha:'Alpha',beta:'Beta'};
+const scn={db:null,ok:false,err:'łączenie…',live:false,list:{alpha:[],beta:[]},cur:{alpha:null,beta:null},sel:{alpha:'',beta:''},msg:{alpha:null,beta:null}};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const canon=v=>Array.isArray(v)?'['+v.map(canon).join(',')+']':v&&typeof v==='object'?'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canon(v[k])).join(',')+'}':JSON.stringify(v);
+const fmtTs=t=>t?new Date(t).toLocaleString('pl-PL',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+const isDate=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&!isNaN(parseDate(s));
+const intIn=(v,lo,hi,d)=>{v=Math.round(Number(v));return Number.isFinite(v)?Math.min(hi,Math.max(lo,v)):d;};
+const tpList=(a,d)=>Array.isArray(a)&&a.length&&a.length<=200?a.map(v=>intIn(v,0,999,0)):d.slice();
+const getParams={
+  alpha:()=>({backlog:state.backlog,tp:state.tp.slice(),iters:state.iters,gMin:state.gMin,gMax:state.gMax,start:state.start,target:state.target}),
+  beta:()=>({tp:bs.tp.slice(),epics:bs.epics.map(e=>e.slice()),alloc:bs.alloc,start:bs.start,target:bs.target,boost:bs.boost,iters:bs.iters,scen:bs.scen})};
+const applyParams={
+  alpha:p=>{
+    state.backlog=intIn(p.backlog,1,2000,62);state.tp=tpList(p.tp,DEFAULT_TP);
+    state.iters=[100000,250000,500000,1000000].includes(+p.iters)?+p.iters:100000;
+    let a=Math.min(300,Math.max(0,+p.gMin||0)),b=Math.min(300,Math.max(0,+p.gMax||0));if(a>b)[a,b]=[b,a];state.gMin=a;state.gMax=b;
+    if(isDate(p.start))state.start=p.start;if(isDate(p.target))state.target=p.target;
+    $('backlog').value=Math.min(state.backlog,300);$('backlogNum').value=state.backlog;$('backlogVal').textContent=state.backlog;
+    $('iters').value=state.iters;$('start').value=state.start;$('target').value=state.target;$('gMin').value=a;$('gMax').value=b;
+    renderChips();scopeHint();run();
+  },
+  beta:p=>{
+    bs.tp=tpList(p.tp,BETA_DEF.tp);
+    bs.epics=Array.isArray(p.epics)&&p.epics.length&&p.epics.length<=20
+      ?p.epics.map(e=>{const a=intIn(e&&e[0],0,500,0),b=intIn(e&&e[1],0,500,0);return a>b?[b,a]:[a,b];}):BETA_DEF.epics.map(e=>e.slice());
+    bs.alloc=intIn(p.alloc,1,100,75);bs.iters=[100000,250000,500000].includes(+p.iters)?+p.iters:100000;
+    bs.scen=SC_ORDER.includes(p.scen)?p.scen:'real';
+    ['start','target','boost'].forEach(k=>{if(isDate(p[k]))bs[k]=p[k];});
+    $('bStart').value=bs.start;$('bTarget').value=bs.target;$('bBoost').value=bs.boost;$('bIters').value=bs.iters;
+    $('bAlloc').value=bs.alloc;$('bAllocNum').value=bs.alloc;$('bAllocVal').textContent=bs.alloc;
+    document.querySelectorAll('#bScen button').forEach(b=>b.classList.toggle('on',b.dataset.s===bs.scen));
+    bRenderChips();bRenderEpics();betaRun();
+  }};
+const rowCur=r=>({id:r.id,name:r.name,author:r.author,updated_at:r.updated_at,params:r.params,stale:null,deleted:false});
+const author=()=>(localStorage.getItem('mc_author')||'').trim().slice(0,60)||null;
+
+function scnRenderCard(t){
+  $('scn-'+t).innerHTML=`<h2>Zapisane scenariusze – zespół ${TEAM_NAME[t]} <span class="live off" id="scnLive-${t}">○ łączenie…</span></h2>
+    <p class="desc">Wspólne dla wszystkich osób z dostępem do strony – zapisanie, zmiana lub usunięcie scenariusza jest od razu widoczne u innych.</p>
+    <div class="scn-row">
+      <select id="scnSel-${t}" aria-label="Zapisane scenariusze zespołu ${TEAM_NAME[t]}"></select>
+      <button class="btn" data-act="load" title="Wczytaj parametry wybranego scenariusza">Wczytaj</button>
+      <button class="btn" data-act="update" title="Zapisz bieżące parametry do wczytanego scenariusza">Zapisz zmiany</button>
+      <button class="btn" data-act="link" title="Kopiuj link otwierający wybrany scenariusz">🔗 Kopiuj link</button>
+      <button class="btn danger" data-act="delete" title="Usuń wybrany scenariusz dla wszystkich">Usuń</button>
+    </div>
+    <div class="scn-row" style="margin-top:8px">
+      <input type="text" id="scnName-${t}" maxlength="80" placeholder="Nazwa nowego scenariusza, np. „Plan Q1 – alokacja 60%”" aria-label="Nazwa nowego scenariusza">
+      <button class="btn primary" data-act="new">💾 Zapisz jako nowy</button>
+      <input type="text" class="scn-author" maxlength="60" placeholder="Twoje imię (autor zmian)" aria-label="Twoje imię">
+    </div>
+    <div class="scn-status" id="scnStatus-${t}"></div>`;
+  const card=$('scn-'+t);
+  card.querySelector('.scn-author').value=localStorage.getItem('mc_author')||'';
+  card.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&!b.disabled)scnAction(t,b.dataset.act);});
+  card.addEventListener('change',e=>{
+    if(e.target.id==='scnSel-'+t){scn.sel[t]=e.target.value;scnStatus(t);}
+    if(e.target.classList.contains('scn-author')){localStorage.setItem('mc_author',e.target.value.trim());document.querySelectorAll('.scn-author').forEach(i=>i.value=e.target.value.trim());}
+  });
+  $('scnName-'+t).addEventListener('keydown',e=>{if(e.key==='Enter')scnAction(t,'new');});
+}
+function scnFlash(t,text,err){scn.msg[t]={text,err};scnStatus(t);clearTimeout(scn.msg[t].tm);const m=scn.msg[t];m.tm=setTimeout(()=>{if(scn.msg[t]===m){scn.msg[t]=null;scnStatus(t);}},5000);}
+function scnRenderList(t){
+  const sel=$('scnSel-'+t),list=scn.list[t],keep=scn.sel[t]||(scn.cur[t]&&scn.cur[t].id)||'';
+  sel.innerHTML=`<option value="">${list.length?`— wybierz scenariusz (${list.length}) —`:'— brak zapisanych scenariuszy —'}</option>`+
+    list.map(r=>`<option value="${esc(r.id)}">${esc(r.name)} · ${esc(r.author||'anonim')} · ${esc(fmtTs(r.updated_at))}</option>`).join('');
+  sel.value=list.some(r=>r.id===keep)?keep:'';scn.sel[t]=sel.value;
+}
+function scnStatus(t){
+  const el=$('scnStatus-'+t);if(!el)return;
+  const live=$('scnLive-'+t);
+  if(live){live.className='live'+(scn.ok&&scn.live?'':' off');live.textContent=!scn.ok?'○ offline':scn.live?'● na żywo':'○ bez aktualizacji na żywo';}
+  const has=!!scn.sel[t],c=scn.cur[t];
+  $('scn-'+t).querySelectorAll('[data-act]').forEach(b=>{const a=b.dataset.act;b.disabled=!scn.ok||((a==='load'||a==='delete'||a==='link')&&!has)||(a==='update'&&(!c||c.deleted));});
+  let h='';
+  if(!scn.ok)h=`<div class="scn-alert warn">⚠️ Brak połączenia z bazą scenariuszy: ${esc(scn.err)}. Prognoza działa normalnie, ale nie można zapisywać scenariuszy.</div>`;
+  else if(c){
+    const dirty=canon(getParams[t]())!==canon(c.params);
+    h=`Wczytano: <b>${esc(c.name)}</b> · ostatnia zmiana: ${esc(c.author||'anonim')}, ${esc(fmtTs(c.updated_at))}${dirty?' · <span class="dirty">● niezapisane zmiany</span>':' · zgodne z zapisem'}`;
+    if(c.deleted)h+=`<div class="scn-alert warn">Ten scenariusz został usunięty przez inną osobę. Możesz zapisać bieżące parametry jako nowy scenariusz.</div>`;
+    else if(c.stale)h+=`<div class="scn-alert">🔄 Scenariusz <b>${esc(c.name)}</b> został zmieniony przez ${esc(c.stale.author||'anonim')} (${esc(fmtTs(c.stale.updated_at))}). <button class="btn sm" data-act="reload">Wczytaj nową wersję</button></div>`;
+  }else h='Bieżące parametry nie są zapisane jako scenariusz.';
+  const m=scn.msg[t];if(m)h+=` <span class="scn-msg${m.err?' err':''}">${m.err?'⚠️':'✓'} ${esc(m.text)}</span>`;
+  el.innerHTML=h;
+}
+function scnRefresh(){['alpha','beta'].forEach(t=>{scnRenderList(t);scnStatus(t);});}
+async function scnLoad(){
+  const {data,error}=await scn.db.from(SB_TABLE).select('id,team,name,params,author,created_at,updated_at').order('name');
+  if(error){scn.ok=false;scn.err=error.code==='PGRST205'?'tabela mc_scenarios nie istnieje (uruchom supabase/mc_scenarios.sql)':error.message;scnRefresh();return false;}
+  scn.ok=true;scn.list={alpha:[],beta:[]};
+  data.forEach(r=>{if(scn.list[r.team])scn.list[r.team].push(r);});
+  ['alpha','beta'].forEach(t=>{const c=scn.cur[t];if(c&&!c.deleted&&!scn.list[t].some(r=>r.id===c.id))c.deleted=true;});
+  scnRefresh();return true;
+}
+function scnOnChange(pl){
+  const r=pl.new&&pl.new.id?pl.new:pl.old;
+  ['alpha','beta'].forEach(t=>{const c=scn.cur[t];if(!c||!r||c.id!==r.id)return;
+    if(pl.eventType==='DELETE')c.deleted=true;
+    else if(pl.new.updated_at!==c.updated_at&&canon(pl.new.params)!==canon(c.params))c.stale=pl.new;
+    else Object.assign(c,{updated_at:pl.new.updated_at,author:pl.new.author,name:pl.new.name});});
+  scnLoad();
+}
+function scnErr(t,error){scnFlash(t,error.code==='23505'?'Scenariusz o tej nazwie już istnieje.':'Błąd zapisu: '+error.message,true);}
+async function scnAction(t,act){
+  const db=scn.db,id=scn.sel[t],row=scn.list[t].find(r=>r.id===id),c=scn.cur[t];
+  if(act==='load'&&row){scn.cur[t]=rowCur(row);applyParams[t](row.params);scnFlash(t,`Wczytano „${row.name}”.`);}
+  else if(act==='reload'&&c&&c.stale){const r=c.stale;scn.cur[t]=rowCur(r);scn.sel[t]=r.id;applyParams[t](r.params);scnRefresh();scnFlash(t,'Wczytano nową wersję.');}
+  else if(act==='new'){
+    const inp=$('scnName-'+t),name=inp.value.trim().slice(0,80);
+    if(!name){inp.focus();scnFlash(t,'Podaj nazwę nowego scenariusza.',true);return;}
+    const dup=scn.list[t].find(r=>r.name.toLowerCase()===name.toLowerCase());
+    if(dup&&!confirm(`Scenariusz „${dup.name}” już istnieje. Nadpisać go bieżącymi parametrami?`))return;
+    const params=getParams[t]();
+    const {data,error}=dup?await db.from(SB_TABLE).update({params,author:author()}).eq('id',dup.id).select().single()
+                          :await db.from(SB_TABLE).insert({team:t,name,params,author:author()}).select().single();
+    if(error)return scnErr(t,error);
+    scn.cur[t]=rowCur(data);scn.sel[t]=data.id;inp.value='';await scnLoad();scnFlash(t,`Zapisano „${data.name}”.`);
+  }
+  else if(act==='update'&&c){
+    if(!confirm(`Nadpisać scenariusz „${c.name}” bieżącymi parametrami? Zmiana będzie widoczna dla wszystkich.`))return;
+    const params=getParams[t]();
+    const {data,error}=await db.from(SB_TABLE).update({params,author:author()}).eq('id',c.id).select().maybeSingle();
+    if(error)return scnErr(t,error);
+    if(!data){c.deleted=true;scnStatus(t);return scnFlash(t,'Scenariusz nie istnieje – zapisz go jako nowy.',true);}
+    scn.cur[t]=rowCur(data);await scnLoad();scnFlash(t,'Zapisano zmiany.');
+  }
+  else if(act==='delete'&&row){
+    if(!confirm(`Usunąć scenariusz „${row.name}” dla wszystkich użytkowników?`))return;
+    const {error}=await db.from(SB_TABLE).delete().eq('id',row.id);
+    if(error)return scnErr(t,error);
+    if(c&&c.id===row.id)scn.cur[t]=null;
+    scn.sel[t]='';await scnLoad();scnFlash(t,`Usunięto „${row.name}”.`);
+  }
+  else if(act==='link'&&row){
+    const url=`${location.origin==='null'?'':location.origin}${location.pathname}?s=${row.id}#${t}`;
+    try{await navigator.clipboard.writeText(url);scnFlash(t,'Skopiowano link do schowka.');}catch(e){prompt('Skopiuj link:',url);}
+  }
+}
+async function scnInit(){
+  ['alpha','beta'].forEach(scnRenderCard);scnRefresh();
+  if(!window.supabase||!supabase.createClient){scn.err='nie udało się załadować biblioteki Supabase';scnRefresh();return;}
+  scn.db=supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+  if(!(await scnLoad()))return;
+  scn.db.channel('mc_scenarios_changes').on('postgres_changes',{event:'*',schema:'public',table:SB_TABLE},scnOnChange)
+    .subscribe(st=>{scn.live=st==='SUBSCRIBED';['alpha','beta'].forEach(scnStatus);});
+  const sid=new URLSearchParams(location.search).get('s');
+  const row=sid&&[...scn.list.alpha,...scn.list.beta].find(r=>r.id===sid);
+  if(row){showTab(row.team);scn.sel[row.team]=row.id;scn.cur[row.team]=rowCur(row);applyParams[row.team](row.params);scnRefresh();}
+}
+scnInit();
 (()=>{const h=location.hash.slice(1),el=h&&document.getElementById(h);showTab(h==='beta'||(el&&el.closest('#tabBeta'))?'beta':'alpha');})();
 </script>
 </body>
