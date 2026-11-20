@@ -1,27 +1,740 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MC</title>
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #4f46e5, #06b6d4);
-      color: #fff;
-      text-align: center;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monte Carlo Forecast – prognoza backlogu</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f3f8f4; --card:#ffffff; --g900:#0b4f2a; --g700:#107c41; --g600:#1e8e4e; --g500:#2e9e5b; --g400:#5bb77f;
+  --g300:#8fd0a6; --g200:#c7ead3; --g100:#e5f4ea; --g50:#f3faf5;
+  --t600:#13857f; --t500:#2a9d97; --t100:#e2f4f2;
+  --azure:#2b7bb9; --azure100:#e6f1fa; --amber:#a86300; --amber100:#fff4de; --violet:#6b5bb5;
+  --text:#1b2a21; --muted:#5b6b61; --border:#e0ebe3;
+  --shadow:0 1.6px 3.6px rgba(0,0,0,.05),0 8px 24px rgba(16,124,65,.07);
+  --r:14px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14.5px;line-height:1.5}
+a{color:var(--g700)}
+header.top{background:linear-gradient(120deg,#ffffff 0%,#eef8f1 55%,#e1f3e7 100%);border-bottom:1px solid var(--border);padding:22px 32px 18px;position:sticky;top:0;z-index:30;backdrop-filter:blur(6px)}
+.top-inner{max-width:1440px;margin:0 auto;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--g500),var(--t500));display:grid;place-items:center;color:#fff;font-weight:700;box-shadow:var(--shadow)}
+h1{font-size:20px;margin:0;font-weight:650;letter-spacing:-.2px}
+.subtitle{color:var(--muted);font-size:13px}
+.top-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.run-info{font-size:12.5px;color:var(--muted);margin-right:6px}
+nav.toc{max-width:1440px;margin:10px auto 0;display:flex;gap:6px;flex-wrap:wrap}
+nav.toc a{font-size:12.5px;text-decoration:none;color:var(--g700);background:#fff;border:1px solid var(--border);padding:3px 10px;border-radius:999px}
+nav.toc a:hover{background:var(--g100)}
+main{max-width:1440px;margin:0 auto;padding:22px 32px 60px}
+.btn{border:1px solid var(--border);background:#fff;color:var(--text);padding:8px 14px;border-radius:10px;cursor:pointer;font:inherit;font-size:13.5px;display:inline-flex;align-items:center;gap:6px;transition:.15s}
+.btn:hover{background:var(--g50);border-color:var(--g300)}
+.btn.primary{background:var(--g700);color:#fff;border-color:var(--g700);box-shadow:0 2px 8px rgba(16,124,65,.25)}
+.btn.primary:hover{background:var(--g600)}
+.btn.sm{padding:4px 10px;font-size:12px;border-radius:8px}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--border);padding:20px 22px}
+section{margin-top:24px}
+h2{font-size:17px;margin:0 0 4px;font-weight:650;display:flex;align-items:center;gap:8px}
+h3{font-size:14.5px;margin:0 0 8px;font-weight:650}
+.desc{color:var(--muted);font-size:13px;margin:0 0 14px}
+.grid{display:grid;gap:18px}
+.grid>*{min-width:0}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:1100px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:1fr}}
+@media(max-width:820px){.g2{grid-template-columns:1fr}main,header.top{padding-left:16px;padding-right:16px}header.top{position:static}}
+/* Controls */
+.controls{display:grid;grid-template-columns:1.1fr 2fr 1fr 1fr;gap:20px}
+@media(max-width:1100px){.controls{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.controls{grid-template-columns:1fr}}
+label.lbl{display:flex;align-items:center;gap:6px;font-weight:600;font-size:13px;margin-bottom:6px}
+.field{margin-bottom:12px}
+input[type=number],input[type=date],input[type=text],select{font:inherit;font-size:13.5px;border:1px solid var(--border);border-radius:8px;padding:7px 9px;background:#fff;color:var(--text);width:100%}
+input:focus,select:focus{outline:2px solid var(--g300);border-color:var(--g400)}
+input[type=range]{width:100%;accent-color:var(--g700)}
+.range-row{display:flex;gap:10px;align-items:center}
+.range-row input[type=number]{width:80px}
+.bigval{font-size:26px;font-weight:700;color:var(--g700)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.chip{display:flex;align-items:center;background:var(--g50);border:1px solid var(--g200);border-radius:10px;padding:2px 2px 2px 8px;font-size:12px;color:var(--muted)}
+.chip input{width:46px;border:none;background:transparent;padding:3px 2px;font-weight:600;color:var(--g900);text-align:center}
+.chip input:focus{outline:none;background:#fff;border-radius:6px}
+.chip button{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;padding:0 6px;border-radius:6px}
+.chip button:hover{background:var(--g100);color:var(--g900)}
+.inline{display:flex;gap:8px}
+.hint{font-size:12px;color:var(--muted)}
+.err{color:var(--amber);font-size:12.5px;margin-top:4px;min-height:16px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+/* Tooltips */
+.tip{position:relative;display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;background:var(--g100);color:var(--g700);font-size:11px;font-weight:700;cursor:help;border:1px solid var(--g200);flex:none}
+.tip:hover::after,.tip:focus::after{content:attr(data-tip);position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);width:280px;background:#fff;color:var(--text);border:1px solid var(--g200);box-shadow:0 8px 28px rgba(0,0,0,.12);padding:10px 12px;border-radius:10px;font-size:12.5px;font-weight:400;line-height:1.45;z-index:50;white-space:normal;text-align:left}
+.glossary{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.gl{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--border);padding:4px 10px;border-radius:999px;font-size:12.5px}
+/* KPI tiles */
+.scen-row{margin-top:14px}
+.scen-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.badge{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px}
+.badge.a{background:var(--g100);color:var(--g700)}
+.badge.b{background:var(--t100);color:var(--t600)}
+.tile{border-radius:16px;padding:18px 18px 16px;color:#fff;box-shadow:0 6px 20px rgba(16,124,65,.18);position:relative;overflow:hidden}
+.tile::after{content:"";position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.12)}
+.tile.a{background:linear-gradient(135deg,#1f9d57,#4fbf80)}
+.tile.a.dark{background:linear-gradient(135deg,#107c41,#2f9e5e)}
+.tile.b{background:linear-gradient(135deg,#138a7e,#3fb3a4)}
+.tile.b.dark{background:linear-gradient(135deg,#0f6f69,#239489)}
+.tile .k{font-size:12.5px;opacity:.92;font-weight:600;display:flex;align-items:center;gap:6px}
+.tile .v{font-size:27px;font-weight:700;margin:6px 0 2px;letter-spacing:-.4px}
+.tile .s{font-size:12.5px;opacity:.9}
+.tile .tip{background:rgba(255,255,255,.25);color:#fff;border-color:rgba(255,255,255,.4)}
+/* Answers */
+.answers li{margin:6px 0;list-style:none;padding:8px 12px;border-radius:10px;background:var(--g50);border:1px solid var(--g100)}
+.answers li.warn{background:var(--amber100);border-color:#f6e2b8}
+.answers ul{padding:0;margin:0}
+.answers b{color:var(--g900)}
+/* Manager */
+.mgr-card{border-radius:14px;padding:16px 18px;background:var(--g50);border:1px solid var(--g200)}
+.mgr-card .big{font-size:22px;font-weight:700;color:var(--g700);margin:4px 0}
+.risk-badge{display:inline-block;padding:4px 12px;border-radius:999px;font-weight:700;font-size:14px}
+.risk-low{background:var(--g100);color:var(--g700)}
+.risk-mid{background:var(--azure100);color:var(--azure)}
+.risk-high{background:var(--amber100);color:var(--amber)}
+.meter{height:10px;border-radius:99px;background:#edf2ee;overflow:hidden;margin:8px 0 4px}
+.meter>div{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--g400),var(--g700))}
+.warnlist{margin:0;padding-left:0}
+.warnlist li{list-style:none;padding:7px 10px;margin:5px 0;border-radius:9px;background:var(--amber100);border:1px solid #f4e0b6;font-size:13px}
+.warnlist li.info{background:var(--azure100);border-color:#cfe3f3}
+/* Charts */
+.chart-card{display:flex;flex-direction:column}
+.chart-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:6px}
+.chart-head .actions{margin-left:auto;display:flex;gap:6px;align-items:center}
+.chart-box{position:relative;height:320px}
+.chart-box.tall{height:400px}
+.seg{display:inline-flex;background:var(--g50);border:1px solid var(--border);border-radius:9px;padding:2px}
+.seg button{border:none;background:transparent;padding:4px 10px;border-radius:7px;cursor:pointer;font:inherit;font-size:12px;color:var(--muted)}
+.seg button.on{background:#fff;color:var(--g700);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.legend-note{font-size:12px;color:var(--muted);margin-top:8px}
+.key{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 4px 0 10px;vertical-align:-1px}
+/* Tables */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px}
+th,td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+thead th{background:var(--g50);color:var(--g900);font-weight:600;position:sticky;top:0}
+thead th:first-child{border-top-left-radius:10px}thead th:last-child{border-top-right-radius:10px}
+tbody tr:hover td{background:#fafdfb}
+td small{color:var(--muted);display:block;font-size:11.5px}
+tr.hl td{background:var(--g50);font-weight:600}
+.pbar{display:inline-block;width:70px;height:7px;background:#edf2ee;border-radius:9px;vertical-align:middle;margin-left:8px;overflow:hidden}
+.pbar>i{display:block;height:100%;background:var(--g500)}
+.pbar.b>i{background:var(--t500)}
+.sec-title{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;margin:16px 0 6px}
+.overlay{position:fixed;inset:0;background:rgba(243,248,244,.6);display:none;place-items:center;z-index:100;backdrop-filter:blur(2px)}
+.overlay.on{display:grid}
+.spinner{background:#fff;padding:18px 26px;border-radius:14px;box-shadow:var(--shadow);display:flex;gap:12px;align-items:center;font-weight:600;color:var(--g700)}
+.spinner i{width:20px;height:20px;border-radius:50%;border:3px solid var(--g200);border-top-color:var(--g700);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.method li{margin:4px 0}
+footer{color:var(--muted);font-size:12px;text-align:center;margin-top:30px}
+</style>
 </head>
 <body>
-  <main>
-    <h1>Witaj na stronie MC!</h1>
-    <p>Strona opublikowana za pomocą GitHub Pages.</p>
-  </main>
+<div class="overlay" id="overlay"><div class="spinner"><i></i>Trwa symulacja Monte Carlo…</div></div>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="logo">MC</div>
+    <div>
+      <h1>Monte Carlo Forecast · Prognoza dostarczenia backlogu</h1>
+      <div class="subtitle">Probabilistyczne prognozowanie na podstawie historycznego throughputu · sprinty 2-tygodniowe</div>
+    </div>
+    <div class="top-actions">
+      <span class="run-info" id="runInfo">—</span>
+      <button class="btn" id="csvBtn" title="Eksport podsumowania wyników do CSV">⬇ CSV – wyniki</button>
+      <button class="btn" id="csvRawBtn" title="Eksport wszystkich iteracji do CSV">⬇ CSV – iteracje</button>
+      <button class="btn primary" id="runBtn">↻ Uruchom ponownie symulację</button>
+    </div>
+  </div>
+  <nav class="toc">
+    <a href="#params">Parametry</a><a href="#summary">Executive Summary</a><a href="#answers">Odpowiedzi dla biznesu</a>
+    <a href="#manager">Interpretacja dla managera</a><a href="#charts">Wykresy</a><a href="#compare">Porównanie A vs B</a>
+    <a href="#risk">Ryzyko</a><a href="#tables">Statystyki</a><a href="#method">Metodologia</a>
+  </nav>
+</header>
+
+<main>
+  <!-- PARAMETERS -->
+  <section id="params" class="card" style="margin-top:0">
+    <h2>Parametry symulacji</h2>
+    <p class="desc">Zmiana dowolnego parametru automatycznie przelicza prognozę.</p>
+    <div class="controls">
+      <div>
+        <div class="field">
+          <label class="lbl">Elementy backlogu <span class="tip" tabindex="0" data-tip="Liczba elementów (np. user stories) pozostałych do dostarczenia w dniu startu prognozy.">?</span></label>
+          <div class="bigval" id="backlogVal">62</div>
+          <div class="range-row">
+            <input type="range" id="backlog" min="1" max="300" value="62">
+            <input type="number" id="backlogNum" min="1" max="2000" value="62">
+          </div>
+        </div>
+        <div class="field">
+          <label class="lbl">Iteracje Monte Carlo <span class="tip" tabindex="0" data-tip="Monte Carlo: metoda, która tysiące razy losowo „odtwarza” przyszłość na podstawie danych historycznych. Więcej iteracji = stabilniejsze percentyle.">?</span></label>
+          <select id="iters">
+            <option value="100000" selected>100 000</option>
+            <option value="250000">250 000</option>
+            <option value="500000">500 000</option>
+            <option value="1000000">1 000 000</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="lbl">Historyczny throughput (el./sprint) <span class="tip" tabindex="0" data-tip="Throughput: liczba elementów faktycznie ukończonych przez zespół w jednym sprincie. Każda iteracja losuje (ze zwracaniem) wartości z tej listy.">?</span></label>
+        <div class="chips" id="tpChips"></div>
+        <div class="inline">
+          <button class="btn sm" id="tpAdd">+ Dodaj sprint</button>
+          <input type="text" id="tpPaste" placeholder="lub wklej listę, np. 5, 4, 4, 5, 6">
+          <button class="btn sm" id="tpApply">Zastosuj</button>
+          <button class="btn sm" id="tpReset" title="Przywróć dane domyślne">Reset</button>
+        </div>
+        <div class="err" id="tpErr"></div>
+        <div class="hint" id="tpStats"></div>
+      </div>
+      <div>
+        <div class="field">
+          <label class="lbl">Start prac</label>
+          <input type="date" id="start" value="2027-01-04">
+          <div class="hint">Sprint 1 zaczyna się tego dnia; sprint = 14 dni.</div>
+        </div>
+        <div class="field">
+          <label class="lbl">Docelowy termin (do oceny ryzyka)</label>
+          <input type="date" id="target" value="2027-05-31">
+        </div>
+      </div>
+      <div>
+        <label class="lbl">Scenariusz B – wzrost zakresu <span class="tip" tabindex="0" data-tip="W każdej iteracji losowany jest przyrost backlogu z rozkładu jednostajnego U(min, max). Nowe elementy są dodawane do bieżącego backlogu (zaokrąglenie w górę).">?</span></label>
+        <div class="two">
+          <div><span class="hint">min %</span><input type="number" id="gMin" min="0" max="300" value="20"></div>
+          <div><span class="hint">max %</span><input type="number" id="gMax" min="0" max="300" value="30"></div>
+        </div>
+        <div class="hint" id="scopeHint" style="margin-top:6px"></div>
+      </div>
+    </div>
+    <div class="glossary">
+      <span class="gl">P50 <span class="tip" tabindex="0" data-tip="P50 (mediana): w 50% symulacji backlog ukończono w tym terminie lub wcześniej. To „rzut monetą” – nie nadaje się na zobowiązanie.">?</span></span>
+      <span class="gl">P85 <span class="tip" tabindex="0" data-tip="P85: w 85% symulacji backlog ukończono w tym terminie lub wcześniej. Rekomendowany poziom do planowania i komunikacji z interesariuszami.">?</span></span>
+      <span class="gl">P95 <span class="tip" tabindex="0" data-tip="P95: w 95% symulacji backlog ukończono w tym terminie lub wcześniej. Bardzo konserwatywny – dla zobowiązań kontraktowych i krytycznych terminów.">?</span></span>
+      <span class="gl">Monte Carlo <span class="tip" tabindex="0" data-tip="Symulacja Monte Carlo: w każdej iteracji losujemy throughput kolejnych sprintów z historii, aż backlog zostanie wyczerpany. Wynikiem jest pełny rozkład możliwych terminów, a nie jedna liczba.">?</span></span>
+      <span class="gl">Throughput <span class="tip" tabindex="0" data-tip="Throughput: liczba elementów ukończonych w sprincie. Mierzy rzeczywistą przepustowość zespołu – nie wymaga estymacji w story pointach.">?</span></span>
+      <span class="gl">Elementy „co najmniej” <span class="tip" tabindex="0" data-tip="Dla liczby elementów do danego dnia pewność 85% oznacza 15. percentyl rozkładu: w 85% symulacji dostarczono co najmniej tyle elementów.">?</span></span>
+    </div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section id="summary">
+    <h2>Executive Summary</h2>
+    <p class="desc" id="summaryDesc"></p>
+    <div id="tiles"></div>
+  </section>
+
+  <!-- ANSWERS -->
+  <section id="answers" class="card">
+    <h2>Odpowiedzi dla biznesu</h2>
+    <p class="desc">Zdania generowane automatycznie na podstawie bieżących wyników symulacji.</p>
+    <div class="grid g2 answers">
+      <div><h3><span class="badge a">Scenariusz A</span> brak nowych wymagań</h3><ul id="ansA"></ul></div>
+      <div><h3><span class="badge b">Scenariusz B</span> wzrost zakresu</h3><ul id="ansB"></ul></div>
+    </div>
+    <h3 style="margin-top:18px">Wpływ wzrostu zakresu (B vs A)</h3>
+    <div class="answers"><ul id="ansImpact"></ul></div>
+  </section>
+
+  <!-- MANAGER -->
+  <section id="manager" class="card">
+    <h2>Interpretacja dla managera</h2>
+    <p class="desc">Rekomendacje planistyczne wynikające z rozkładu, a nie ze średniej.</p>
+    <div class="grid g3">
+      <div class="mgr-card" id="mgrPlan"></div>
+      <div class="mgr-card" id="mgrRisk"></div>
+      <div class="mgr-card"><h3>Ostrzeżenia</h3><ul class="warnlist" id="mgrWarn"></ul></div>
+    </div>
+  </section>
+
+  <!-- CHARTS -->
+  <section id="charts">
+    <div class="grid g2">
+      <div class="card chart-card" style="grid-column:1/-1">
+        <div class="chart-head">
+          <div><h2>Prawdopodobieństwo ukończenia backlogu do danego dnia (CDF)</h2>
+          <p class="desc" style="margin:0">Oto z jakim prawdopodobieństwem ukończymy backlog do danego dnia. To główny wykres decyzyjny.</p></div>
+          <div class="actions"><button class="btn sm" data-png="cdf">⬇ PNG</button></div>
+        </div>
+        <div class="chart-box tall"><canvas id="cdf"></canvas></div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-head">
+          <div><h2>Histogram terminu dostarczenia</h2><p class="desc" style="margin:0">Rozkład dat zakończenia backlogu (koniec sprintu).</p></div>
+          <div class="actions">
+            <div class="seg" data-view="hist"><button data-v="A" class="on">A</button><button data-v="B">B</button></div>
+            <button class="btn sm" data-png="hist">⬇ PNG</button>
+          </div>
+        </div>
+        <div class="chart-box"><canvas id="hist"></canvas></div>
+        <div class="legend-note"><span class="key" style="background:#2e9e5b;margin-left:0"></span>≤ P50<span class="key" style="background:#8fd0a6"></span>P50–P85<span class="key" style="background:#c7ead3"></span>P85–P95<span class="key" style="background:#dfe7e2"></span>&gt; P95</div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-head">
+          <div><h2 id="itemsTitle">Elementy dostarczone do końca marca</h2><p class="desc" style="margin:0" id="itemsDesc"></p></div>
+          <div class="actions">
+            <div class="seg" data-view="items"><button data-v="A" class="on">A</button><button data-v="B">B</button></div>
+            <button class="btn sm" data-png="items">⬇ PNG</button>
+          </div>
+        </div>
+        <div class="chart-box"><canvas id="items"></canvas></div>
+        <div class="legend-note">Pionowe linie: liczba elementów dostarczonych z pewnością 50% / 85% / 95% („co najmniej”).</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="compare">
+    <div class="card">
+      <h2>Porównanie scenariuszy: bez nowych wymagań vs +<span class="gTxt">20–30</span>% zakresu</h2>
+      <p class="desc">Ten sam ciąg losowań throughputu dla obu scenariuszy w każdej iteracji (common random numbers), więc różnica wynika wyłącznie ze wzrostu zakresu.</p>
+      <div class="grid g2">
+        <div class="chart-card">
+          <div class="chart-head"><h3>Rozkład terminów A vs B</h3><div class="actions"><button class="btn sm" data-png="cmpDist">⬇ PNG</button></div></div>
+          <div class="chart-box"><canvas id="cmpDist"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-head"><h3>Percentyle terminu (tygodnie od startu)</h3><div class="actions"><button class="btn sm" data-png="cmpPct">⬇ PNG</button></div></div>
+          <div class="chart-box"><canvas id="cmpPct"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="risk">
+    <div class="grid g2">
+      <div class="card chart-card">
+        <div class="chart-head">
+          <div><h2>Tornado – wpływ czynników ryzyka</h2><p class="desc" style="margin:0" id="tornadoDesc"></p></div>
+          <div class="actions"><button class="btn sm" data-png="tornado">⬇ PNG</button></div>
+        </div>
+        <div class="chart-box"><canvas id="tornado"></canvas></div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-head">
+          <div><h2>Waterfall – od P50 (A) do P95 (B)</h2><p class="desc" style="margin:0">Jak kolejne źródła ryzyka wydłużają termin (w tygodniach od startu).</p></div>
+          <div class="actions"><button class="btn sm" data-png="waterfall">⬇ PNG</button></div>
+        </div>
+        <div class="chart-box"><canvas id="waterfall"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tables" class="card">
+    <h2>Statystyki wyników symulacji</h2>
+    <p class="desc">Pełny rozkład: średnia, mediana, P85, P95 i odchylenie standardowe dla wszystkich obliczeń.</p>
+    <div class="tbl-wrap"><table id="statTbl"></table></div>
+    <div class="sec-title">Prawdopodobieństwo ukończenia całego backlogu do końca miesiąca</div>
+    <div class="tbl-wrap"><table id="probTbl"></table></div>
+  </section>
+
+  <section id="method" class="card">
+    <h2>Metodologia i założenia</h2>
+    <ul class="method" id="methodList"></ul>
+  </section>
+  <footer>Monte Carlo Forecast · wszystkie obliczenia wykonywane lokalnie w przeglądarce</footer>
+</main>
+
+<script>
+"use strict";
+const DEFAULT_TP=[5,4,4,5,6,4,2,3,2,5,6];
+const DAY=86400000, MAXK=5000;
+const MONTHS_GEN=['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
+const MONTHS_NOM=['styczeń','luty','marzec','kwiecień','maj','czerwiec','lipiec','sierpień','wrzesień','październik','listopad','grudzień'];
+const C={a:'#2e9e5b',aD:'#107c41',aL:'#8fd0a6',b:'#2a9d97',bD:'#13857f',bL:'#9fd8d3',p50:'#107c41',p85:'#2b7bb9',p95:'#a86300',grey:'#dfe7e2'};
+
+const $=id=>document.getElementById(id);
+const state={backlog:62,tp:DEFAULT_TP.slice(),iters:100000,gMin:20,gMax:30,start:'2027-01-04',target:'2027-05-31',view:{hist:'A',items:'A'}};
+let R=null; const charts={};
+
+/* ---------- helpers ---------- */
+const nf=(x,d=1)=>Number(x).toLocaleString('pl-PL',{minimumFractionDigits:d,maximumFractionDigits:d});
+const ni=x=>Math.round(x).toLocaleString('pl-PL');
+const pc=(p,d=1)=>nf(p*100,d)+'%';
+function parseDate(s){const [y,m,d]=s.split('-').map(Number);return Date.UTC(y,m-1,d);}
+const fmt=t=>new Date(t).toLocaleDateString('pl-PL',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
+const fmtS=t=>new Date(t).toLocaleDateString('pl-PL',{day:'2-digit',month:'2-digit',year:'2-digit',timeZone:'UTC'});
+const iso=t=>new Date(t).toISOString().slice(0,10);
+const endOfMonth=(y,m)=>Date.UTC(y,m+1,0);
+function nextMonthEnd(start,m){const y=new Date(start).getUTCFullYear();let e=endOfMonth(y,m);if(e<start)e=endOfMonth(y+1,m);return e;}
+const monthLabel=t=>{const d=new Date(t);return 'do końca '+MONTHS_GEN[d.getUTCMonth()]+' '+d.getUTCFullYear();};
+const sprintEnd=k=>R.S+(14*k-1)*DAY;
+const sprintsBy=(S,date)=>Math.max(0,Math.floor(((date-S)/DAY+1)/14));
+function stats(arr){
+  const s=Float64Array.from(arr).sort(), n=s.length; let sum=0; for(let i=0;i<n;i++)sum+=s[i];
+  const mean=sum/n; let v=0; for(let i=0;i<n;i++){const d=s[i]-mean;v+=d*d;}
+  const q=p=>s[Math.min(n-1,Math.max(0,Math.ceil(p*n)-1))];
+  return {n,mean,sd:Math.sqrt(v/(n>1?n-1:1)),p5:q(.05),p15:q(.15),p50:q(.5),p85:q(.85),p95:q(.95),min:s[0],max:s[n-1],sorted:s};
+}
+function cdfAt(st,x){let lo=0,hi=st.n;const s=st.sorted;while(lo<hi){const m=(lo+hi)>>1;if(s[m]<=x)lo=m+1;else hi=m;}return lo/st.n;}
+function counts(arr,min,max){const c=new Float64Array(max-min+1);for(let i=0;i<arr.length;i++){const v=arr[i];if(v>=min&&v<=max)c[v-min]++;}return c;}
+
+/* ---------- simulation ---------- */
+function simulate(p){
+  const n=p.iters, tp=Int32Array.from(p.tp), L=tp.length, N=p.backlog, S=p.S;
+  const mS=sprintsBy(S,p.marchEnd);
+  const sLo=Math.max(N,Math.ceil(N*(1+p.gMin/100)-1e-9)), sHi=Math.max(N,Math.ceil(N*(1+p.gMax/100)-1e-9));
+  const kA=new Int32Array(n),kB=new Int32Array(n),kLo=new Int32Array(n),kHi=new Int32Array(n);
+  const itA=new Int32Array(n),itB=new Int32Array(n),scope=new Int32Array(n),delay=new Int32Array(n);
+  const gSpan=(p.gMax-p.gMin)/100, g0=p.gMin/100;
+  for(let i=0;i<n;i++){
+    const sc=Math.max(N,Math.ceil(N*(1+g0+gSpan*Math.random())-1e-9));
+    const goal=Math.max(sc,sHi);
+    let cum=0,k=0,a=0,b=0,c=0,d=0,atM=mS===0?0:-1;
+    while((cum<goal||k<mS)&&k<MAXK){
+      cum+=tp[(Math.random()*L)|0]; k++;
+      if(!a&&cum>=N)a=k; if(!b&&cum>=sc)b=k; if(!c&&cum>=sLo)c=k; if(!d&&cum>=sHi)d=k;
+      if(k===mS)atM=cum;
+    }
+    kA[i]=a||MAXK; kB[i]=b||MAXK; kLo[i]=c||MAXK; kHi[i]=d||MAXK;
+    itA[i]=Math.min(atM,N); itB[i]=Math.min(atM,sc); scope[i]=sc; delay[i]=(kB[i]-kA[i])*2;
+  }
+  return {kA,kB,kLo,kHi,itA,itB,scope,delay,mS,sLo,sHi};
+}
+
+function run(){
+  if(!validate())return;
+  $('overlay').classList.add('on');
+  setTimeout(()=>{
+    const t0=performance.now();
+    const S=parseDate(state.start);
+    const marchEnd=nextMonthEnd(S,2);
+    const raw=simulate({iters:state.iters,tp:state.tp,backlog:state.backlog,S,marchEnd,gMin:state.gMin,gMax:state.gMax});
+    R={S,marchEnd,target:parseDate(state.target),raw,params:JSON.parse(JSON.stringify(state)),
+      A:stats(raw.kA),B:stats(raw.kB),Lo:stats(raw.kLo),Hi:stats(raw.kHi),
+      itA:stats(raw.itA),itB:stats(raw.itB),scope:stats(raw.scope),delay:stats(raw.delay),tp:stats(state.tp)};
+    R.ms=performance.now()-t0;
+    render();
+    $('overlay').classList.remove('on');
+    $('runInfo').textContent=`${ni(state.iters)} iteracji · ${ni(R.ms)} ms · ${new Date().toLocaleTimeString('pl-PL')}`;
+  },30);
+}
+
+/* ---------- inputs ---------- */
+function renderChips(){
+  const box=$('tpChips'); box.innerHTML='';
+  state.tp.forEach((v,i)=>{
+    const c=document.createElement('div'); c.className='chip';
+    c.innerHTML=`S${i+1}<input type="number" min="0" max="999" value="${v}" aria-label="Throughput sprintu ${i+1}"><button title="Usuń">×</button>`;
+    c.querySelector('input').addEventListener('change',e=>{const x=parseInt(e.target.value,10);state.tp[i]=isNaN(x)||x<0?0:x;e.target.value=state.tp[i];tpInfo();schedule();});
+    c.querySelector('button').addEventListener('click',()=>{if(state.tp.length<=1)return;state.tp.splice(i,1);renderChips();schedule();});
+    box.appendChild(c);
+  });
+  tpInfo();
+}
+function tpInfo(){
+  const st=stats(state.tp);
+  $('tpStats').textContent=`${spr(state.tp.length)} · średnia ${nf(st.mean,2)} · mediana ${nf(st.p50,0)} · σ ${nf(st.sd,2)} · min ${st.min} · max ${st.max}`;
+}
+function validate(){
+  const ok=state.tp.length>0&&state.tp.some(v=>v>0);
+  $('tpErr').textContent=ok?'':'Lista throughputu musi zawierać co najmniej jedną wartość > 0.';
+  return ok;
+}
+let timer=null; function schedule(){clearTimeout(timer);timer=setTimeout(run,350);}
+function scopeHint(){
+  const N=state.backlog; $('scopeHint').textContent=`Zakres B: ${Math.ceil(N*(1+state.gMin/100)-1e-9)}–${Math.ceil(N*(1+state.gMax/100)-1e-9)} elementów (losowo w każdej iteracji)`;
+  document.querySelectorAll('.gTxt').forEach(e=>e.textContent=state.gMin===state.gMax?state.gMin:`${state.gMin}–${state.gMax}`);
+}
+function bindInputs(){
+  const setB=v=>{v=Math.max(1,Math.min(2000,parseInt(v,10)||1));state.backlog=v;$('backlog').value=Math.min(v,300);$('backlogNum').value=v;$('backlogVal').textContent=v;scopeHint();schedule();};
+  $('backlog').addEventListener('input',e=>setB(e.target.value));
+  $('backlogNum').addEventListener('change',e=>setB(e.target.value));
+  $('iters').addEventListener('change',e=>{state.iters=parseInt(e.target.value,10);schedule();});
+  $('start').addEventListener('change',e=>{if(e.target.value){state.start=e.target.value;schedule();}});
+  $('target').addEventListener('change',e=>{if(e.target.value){state.target=e.target.value;schedule();}});
+  const setG=()=>{let a=Math.max(0,parseFloat($('gMin').value)||0),b=Math.max(0,parseFloat($('gMax').value)||0);if(a>b)[a,b]=[b,a];state.gMin=a;state.gMax=b;$('gMin').value=a;$('gMax').value=b;scopeHint();schedule();};
+  $('gMin').addEventListener('change',setG); $('gMax').addEventListener('change',setG);
+  $('tpAdd').addEventListener('click',()=>{state.tp.push(Math.round(stats(state.tp).p50));renderChips();schedule();});
+  $('tpApply').addEventListener('click',()=>{
+    const v=$('tpPaste').value.split(/[\s,;]+/).filter(Boolean).map(Number);
+    if(!v.length||v.some(x=>!Number.isInteger(x)||x<0)){$('tpErr').textContent='Podaj nieujemne liczby całkowite oddzielone przecinkami.';return;}
+    state.tp=v;$('tpPaste').value='';renderChips();schedule();
+  });
+  $('tpReset').addEventListener('click',()=>{state.tp=DEFAULT_TP.slice();renderChips();schedule();});
+  $('runBtn').addEventListener('click',run);
+  document.querySelectorAll('.seg').forEach(seg=>seg.addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b)return;
+    seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    state.view[seg.dataset.view]=b.dataset.v; if(R){seg.dataset.view==='hist'?chartHist():chartItems();}
+  }));
+  document.querySelectorAll('[data-png]').forEach(b=>b.addEventListener('click',()=>{
+    const ch=charts[b.dataset.png]; if(!ch)return;
+    const a=document.createElement('a'); a.href=ch.toBase64Image('image/png',1); a.download=`monte-carlo-${b.dataset.png}.png`; a.click();
+  }));
+  $('csvBtn').addEventListener('click',exportCsv);
+  $('csvRawBtn').addEventListener('click',exportRaw);
+}
+
+/* ---------- render ---------- */
+function render(){
+  const N=R.params.backlog;
+  $('summaryDesc').innerHTML=`Start: <b>${fmt(R.S)}</b> · backlog: <b>${N}</b> el. · scenariusz B: +${R.params.gMin}–${R.params.gMax}% (średnio ${nf(R.scope.mean)} el.) · ${ni(R.params.iters)} iteracji Monte Carlo.`;
+  renderTiles(); renderAnswers(); renderManager(); renderTables(); renderMethod();
+  chartCdf(); chartHist(); chartItems(); chartCmp(); chartTornado(); chartWaterfall();
+}
+function tile(cls,k,v,s,tip){return `<div class="tile ${cls}"><div class="k">${k}${tip?` <span class="tip" tabindex="0" data-tip="${tip}">?</span>`:''}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;}
+const TIPS={p50:'P50: w 50% symulacji backlog ukończono do tej daty lub wcześniej.',p85:'P85: w 85% symulacji backlog ukończono do tej daty lub wcześniej – rekomendowany poziom planowania.',p95:'P95: w 95% symulacji backlog ukończono do tej daty lub wcześniej – poziom dla zobowiązań.',it:'Liczba elementów, którą zespół dostarczy co najmniej z pewnością 85% (15. percentyl rozkładu).'};
+function renderTiles(){
+  const mL=monthLabel(R.marchEnd);
+  const row=(key,cls,title,sub)=>{
+    const st=R[key], it=key==='A'?R.itA:R.itB;
+    const t=p=>tile(cls+(p==='p85'?' dark':''),`${p.toUpperCase()} zakończenia`,fmt(sprintEnd(st[p])),`sprint ${st[p]} · ${st[p]*2} tyg. od startu`,TIPS[p]);
+    return `<div class="scen-row"><div class="scen-head"><span class="badge ${cls}">${title}</span><span class="hint">${sub}</span></div>
+      <div class="grid g4">${t('p50')}${t('p85')}${t('p95')}${tile(cls,`Elementy ${mL} (85%)`,`≥ ${it.p15} el.`,`50%: ≥ ${it.p50} · 95%: ≥ ${it.p5} · ${pc(it.p15/(key==='A'?R.params.backlog:R.scope.mean),0)} zakresu`,TIPS.it)}</div></div>`;
+  };
+  $('tiles').innerHTML=row('A','a','Scenariusz A – bez nowych wymagań',`${R.params.backlog} elementów`)+
+    row('B','b',`Scenariusz B – +${R.params.gMin}–${R.params.gMax}% nowych wymagań`,`${R.raw.sLo}–${R.raw.sHi} elementów, średnio ${nf(R.scope.mean)}`);
+}
+function monthChecks(){return [1,2,3,4].map(m=>nextMonthEnd(R.S,m)).sort((a,b)=>a-b);}
+function probBy(st,date){return cdfAt(st,sprintsBy(R.S,date));}
+function scenarioAnswers(key){
+  const st=R[key], it=key==='A'?R.itA:R.itB, out=[];
+  const scopeTxt=key==='A'?`${R.params.backlog} el.`:`${R.raw.sLo}–${R.raw.sHi} el. po wzroście zakresu`;
+  [['50','p50'],['85','p85'],['95','p95']].forEach(([p,f])=>out.push(['ok',`Z ${p}% prawdopodobieństwem backlog (${scopeTxt}) zostanie ukończony do <b>${fmt(sprintEnd(st[f]))}</b> (${spr(st[f])}, ${st[f]*2} tyg.).`]));
+  out.push(['ok',`${cap(monthLabel(R.marchEnd))} (pełne sprinty: ${R.raw.mS}) zostanie dostarczonych co najmniej <b>${it.p50} el.</b> z pewnością 50%, <b>${it.p15} el.</b> z pewnością 85% i <b>${it.p5} el.</b> z pewnością 95%.`]);
+  monthChecks().forEach(d=>{
+    const p=probBy(st,d);
+    if(p===0)out.push(['warn',`Ukończenie całego backlogu ${monthLabel(d)}: <b>0%</b> – nie wystąpiło w żadnej z ${ni(st.n)} symulacji.`]);
+    else out.push([p>=.85?'ok':'warn',`Prawdopodobieństwo ukończenia całego backlogu ${monthLabel(d)}: <b>${pc(p)}</b>.`]);
+  });
+  return out;
+}
+const spr=k=>{const d=k%10,t=k%100;return k+(k===1?' sprint':(d>=2&&d<=4&&(t<12||t>14))?' sprinty':' sprintów');};
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const li=([t,h])=>`<li class="${t==='warn'?'warn':''}">${t==='warn'?'⚠️':'✅'} ${h}</li>`;
+function impactAnswers(){
+  const A=R.A,B=R.B,o=[];
+  const d=R.delay;
+  o.push(['ok',`Dodanie ${R.params.gMin}–${R.params.gMax}% nowych wymagań (średnio +${nf(R.scope.mean-R.params.backlog)} el.) przesuwa datę dostarczenia średnio o <b>${nf(d.mean)} tyg.</b> (mediana ${nf(d.p50,0)} tyg., w 85% symulacji ≤ ${nf(d.p85,0)} tyg.).`]);
+  ['p50','p85','p95'].forEach(p=>o.push(['ok',`${p.toUpperCase()}: z ${fmt(sprintEnd(A[p]))} na <b>${fmt(sprintEnd(B[p]))}</b> (+${(B[p]-A[p])*2} tyg.).`]));
+  const ra=R.itA.p15/R.params.backlog, rb=R.itA.p15/R.scope.mean;
+  o.push(['ok',`Liczba elementów dostarczonych ${monthLabel(R.marchEnd)} (85%): A ≥ <b>${R.itA.p15}</b>, B ≥ <b>${R.itB.p15}</b> – przepustowość się nie zmienia, ale w B to tylko ${pc(R.itB.p15/R.scope.mean,0)} zakresu zamiast ${pc(ra,0)}. Po marcu pozostaje średnio ${nf(R.params.backlog-R.itA.mean)} el. (A) vs ${nf(R.scope.mean-R.itB.mean)} el. (B).`]);
+  const pA=probBy(A,R.target),pB=probBy(B,R.target);
+  o.push([pB<pA?'warn':'ok',`Ryzyko: prawdopodobieństwo dotrzymania terminu ${fmt(R.target)} zmienia się z ${pc(pA)} na ${pc(pB)}; bufor bezpieczeństwa P95–P50 rośnie z ${(A.p95-A.p50)*2} do ${(B.p95-B.p50)*2} tyg., odchylenie standardowe terminu z ${nf(A.sd*2)} do ${nf(B.sd*2)} tyg.`]);
+  return o;
+}
+function renderAnswers(){
+  $('ansA').innerHTML=scenarioAnswers('A').map(li).join('');
+  $('ansB').innerHTML=scenarioAnswers('B').map(li).join('');
+  $('ansImpact').innerHTML=impactAnswers().map(li).join('');
+}
+function riskLevel(p){return p>=.85?['Niskie','risk-low']:p>=.5?['Umiarkowane','risk-mid']:['Wysokie','risk-high'];}
+function renderManager(){
+  const A=R.A,B=R.B,useB=R.params.gMax>0;
+  const P=useB?B:A;
+  $('mgrPlan').innerHTML=`<h3>Rekomendowana data planowania</h3>
+    <div class="big">${fmt(sprintEnd(P.p85))}</div>
+    <div class="hint">P85 scenariusza ${useB?'B (z rezerwą na wzrost zakresu)':'A'} · sprint ${P.p85}</div>
+    <ul class="warnlist" style="margin-top:10px">
+      <li class="info">🎯 Cel wewnętrzny zespołu (P50 A): <b>${fmt(sprintEnd(A.p50))}</b> – nie komunikuj go jako zobowiązania.</li>
+      <li class="info">📄 Zobowiązanie kontraktowe / krytyczne (P95 ${useB?'B':'A'}): <b>${fmt(sprintEnd(P.p95))}</b>.</li>
+      <li class="info">🔄 Aktualizuj prognozę po każdym sprincie – to prognoza krocząca, nie plan stały.</li>
+    </ul>`;
+  const pA=probBy(A,R.target),pB=probBy(B,R.target),[lvl,cls]=riskLevel(useB?pB:pA);
+  const need=sprintsBy(R.S,R.target);
+  $('mgrRisk').innerHTML=`<h3>Poziom ryzyka dla terminu ${fmt(R.target)}</h3>
+    <span class="risk-badge ${cls}">${lvl}</span>
+    <div style="margin-top:12px">Scenariusz A: <b>${pc(pA)}</b></div><div class="meter"><div style="width:${pA*100}%"></div></div>
+    <div>Scenariusz B: <b>${pc(pB)}</b></div><div class="meter"><div style="width:${pB*100}%;background:linear-gradient(90deg,#5fc0b6,#13857f)"></div></div>
+    <div class="hint" style="margin-top:8px">Do tego terminu mieści się pełnych sprintów: ${need}. Skala: ≥85% niskie, 50–85% umiarkowane, &lt;50% wysokie.
+    ${pB<.85?`<br>Termin osiągalny z 85% pewnością (B): <b>${fmt(sprintEnd(B.p85))}</b>.`:''}</div>`;
+  $('mgrWarn').innerHTML=warnings().map(([t,h])=>`<li class="${t}">${h}</li>`).join('');
+}
+function warnings(){
+  const w=[],tp=R.tp,N=R.params.backlog,n=R.params.tp.length;
+  const months=monthChecks(),last=months[months.length-1];
+  if(probBy(R.A,last)===0){
+    const k=sprintsBy(R.S,last);
+    w.push(['',`⚠️ Żaden z terminów ${MONTHS_NOM[new Date(months[0]).getUTCMonth()]}–${MONTHS_NOM[new Date(last).getUTCMonth()]} nie jest osiągalny nawet w scenariuszu A: do ${fmt(last)} mieści się ${spr(k)}, co wymagałoby średnio ${nf(N/Math.max(k,1))} el./sprint (historyczne maksimum: ${tp.max}).`]);
+  }
+  const cv=tp.sd/tp.mean;
+  if(cv>.3)w.push(['',`⚠️ Wysoka zmienność throughputu (współczynnik zmienności ${pc(cv,0)}, zakres ${tp.min}–${tp.max}) – szeroki rozrzut prognozy.`]);
+  if(n<8)w.push(['',`⚠️ Mała próbka historyczna (${spr(n)}) – prognoza może być niestabilna; zalecane min. 8–10 sprintów.`]);
+  if(n>=6){const last=R.params.tp.slice(-5),m=last.reduce((a,b)=>a+b,0)/last.length;
+    if(m<tp.mean*.9)w.push(['',`⚠️ Ostatnie 5 sprintów (śr. ${nf(m,2)}) jest poniżej średniej historycznej (${nf(tp.mean,2)}) – zweryfikuj, czy nie zachodzi trwały spadek przepustowości.`]);}
+  const pB=probBy(R.B,R.target);
+  if(pB<.5)w.push(['',`⚠️ Termin ${fmt(R.target)} ma tylko ${pc(pB)} szans w scenariuszu B – rozważ redukcję zakresu (MVP), priorytetyzację lub zmianę terminu.`]);
+  w.push(['info',`ℹ️ Wzrost zakresu o ${R.params.gMin}–${R.params.gMax}% to średnio +${nf(R.delay.mean)} tyg. – kontroluj napływ nowych wymagań (np. limit WIP backlogu, przegląd z PO).`]);
+  w.push(['info',`ℹ️ Prognoza zakłada stały skład zespołu i brak przerw (urlopy, święta) – uwzględnij je ręcznie lub wybierz wyższy percentyl.`]);
+  return w;
+}
+
+/* ---------- tables ---------- */
+function renderTables(){
+  const wk=(st,f)=>`${nf(st[f]*2,f==='mean'?1:0)} tyg.<small>${fmt(R.S+Math.round(st[f]*14-1)*DAY)}</small>`;
+  const rowK=(name,st)=>`<tr><td>${name}</td><td>${wk(st,'mean')}</td><td>${wk(st,'p50')}</td><td>${wk(st,'p85')}</td><td>${wk(st,'p95')}</td><td>${nf(st.sd*2)} tyg.</td></tr>`;
+  const rowV=(name,st,unit,d=1)=>`<tr><td>${name}</td><td>${nf(st.mean,d)} ${unit}</td><td>${nf(st.p50,0)} ${unit}</td><td>${nf(st.p85,0)} ${unit}</td><td>${nf(st.p95,0)} ${unit}</td><td>${nf(st.sd,d)} ${unit}</td></tr>`;
+  const rowI=(name,st,total)=>`<tr><td>${name}<small>P85/P95 = pewność „co najmniej” (15. / 5. percentyl)</small></td><td>${nf(st.mean)} el.<small>${pc(st.mean/total,0)} zakresu</small></td><td>${st.p50} el.<small>≥ z pewnością 50%</small></td><td>≥ ${st.p15} el.<small>z pewnością 85%</small></td><td>≥ ${st.p5} el.<small>z pewnością 95%</small></td><td>${nf(st.sd)} el.</td></tr>`;
+  const mL=monthLabel(R.marchEnd);
+  $('statTbl').innerHTML=`<thead><tr><th>Wielkość</th><th>Średnia</th><th>Mediana (P50)</th><th>P85</th><th>P95</th><th>Odchylenie std.</th></tr></thead><tbody>
+    ${rowK('Termin ukończenia – Scenariusz A',R.A)}${rowK('Termin ukończenia – Scenariusz B',R.B)}
+    ${rowV('Opóźnienie B względem A (w tej samej iteracji)',R.delay,'tyg.')}
+    ${rowI('Elementy '+mL+' – A',R.itA,R.params.backlog)}${rowI('Elementy '+mL+' – B',R.itB,R.scope.mean)}
+    ${rowV('Wielkość backlogu – Scenariusz B',R.scope,'el.')}
+    ${rowV('Historyczny throughput (wejście)',R.tp,'el./sprint',2)}</tbody>`;
+  const asked=monthChecks().map(iso); let rows='';
+  const S=new Date(R.S); 
+  for(let i=0;i<15;i++){
+    const d=endOfMonth(S.getUTCFullYear(),S.getUTCMonth()+i), pA=probBy(R.A,d), pB=probBy(R.B,d);
+    const hl=asked.includes(iso(d));
+    rows+=`<tr class="${hl?'hl':''}"><td>${cap(MONTHS_NOM[new Date(d).getUTCMonth()])} ${new Date(d).getUTCFullYear()} <small>do ${fmt(d)} · ${spr(sprintsBy(R.S,d))}${hl?' · pytanie biznesowe':''}</small></td>
+      <td>${pc(pA)}<span class="pbar"><i style="width:${pA*100}%"></i></span></td><td>${pc(pB)}<span class="pbar b"><i style="width:${pB*100}%"></i></span></td><td>${nf((pA-pB)*100)} pp</td></tr>`;
+  }
+  $('probTbl').innerHTML=`<thead><tr><th>Koniec miesiąca</th><th>Scenariusz A</th><th>Scenariusz B</th><th>Różnica A–B</th></tr></thead><tbody>${rows}</tbody>`;
+}
+function renderMethod(){
+  $('methodList').innerHTML=[
+    `Każda z ${ni(R.params.iters)} iteracji losuje (ze zwracaniem, z równym prawdopodobieństwem) throughput kolejnych sprintów z listy historycznej: ${R.params.tp.join(', ')}.`,
+    `Sprint trwa 14 dni; sprint 1 zaczyna się ${fmt(R.S)}. Datą ukończenia jest ostatni dzień sprintu, w którym skumulowany throughput osiągnął wielkość backlogu.`,
+    `Liczba elementów ${monthLabel(R.marchEnd)} uwzględnia tylko pełne sprinty zakończone do tego dnia (${spr(R.raw.mS)}) – podejście konserwatywne.`,
+    `Scenariusz B: w każdej iteracji przyrost zakresu g ~ U(${R.params.gMin}%, ${R.params.gMax}%), zakres = ⌈${R.params.backlog} × (1 + g)⌉. Oba scenariusze korzystają z tego samego ciągu losowań throughputu.`,
+    `Percentyle liczone metodą najbliższej rangi z pełnego rozkładu. Dla dat: P85 = 85. percentyl (85% symulacji kończy się nie później). Dla liczby elementów: pewność 85% = 15. percentyl (85% symulacji dostarcza co najmniej tyle).`,
+    `Średnia pokazana jest wyłącznie informacyjnie – decyzje należy opierać na percentylach i krzywej CDF.`,
+    `Tornado: wahania terminu względem P50 scenariusza A – zmienność throughputu (P15↔P85, P5↔P95 rozkładu A) oraz wzrost zakresu (P50 przy stałym przyroście ${R.params.gMin}% ↔ ${R.params.gMax}%, ta sama symulacja).`
+  ].map(t=>`<li>${t}</li>`).join('');
+}
+
+/* ---------- charts ---------- */
+Chart.defaults.font.family='"Segoe UI Variable","Segoe UI",system-ui,sans-serif';
+Chart.defaults.color='#5b6b61';
+Chart.defaults.maintainAspectRatio=false;
+Chart.defaults.scale.grid.color='#eef3ef';
+Chart.defaults.plugins.legend.labels.usePointStyle=true;
+Chart.defaults.plugins.legend.labels.boxWidth=8;
+Object.assign(Chart.defaults.plugins.tooltip,{backgroundColor:'#ffffff',titleColor:'#1b2a21',bodyColor:'#1b2a21',borderColor:'#c7ead3',borderWidth:1,padding:10,cornerRadius:8,boxPadding:4});
+Chart.register({id:'bgWhite',beforeDraw(c){const x=c.ctx;x.save();x.globalCompositeOperation='destination-over';x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.restore();}});
+Chart.register({id:'refLines',afterDatasetsDraw(c,_a,o){
+  const {ctx,chartArea:a,scales}=c; if(!o)return; ctx.save();
+  (o.v||[]).forEach((l,i)=>{const x=scales.x.getPixelForValue(l.x); if(x<a.left-1||x>a.right+1)return;
+    ctx.strokeStyle=l.color;ctx.lineWidth=2;ctx.setLineDash(l.dash||[6,4]);ctx.beginPath();ctx.moveTo(x,a.top);ctx.lineTo(x,a.bottom);ctx.stroke();
+    if(l.label){ctx.setLineDash([]);ctx.font='600 11px Segoe UI, sans-serif';const w=ctx.measureText(l.label).width+10,y=a.top+4+i*18;
+      const lx=Math.min(x+4,a.right-w);ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(lx,y,w,16);ctx.fillStyle=l.color;ctx.fillText(l.label,lx+5,y+12);}});
+  (o.h||[]).forEach(l=>{const y=scales.y.getPixelForValue(l.y);
+    ctx.strokeStyle=l.color;ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(a.left,y);ctx.lineTo(a.right,y);ctx.stroke();
+    if(l.label){ctx.setLineDash([]);ctx.font='600 11px Segoe UI, sans-serif';ctx.fillStyle=l.color;ctx.fillText(l.label,a.left+6,y-5);}});
+  ctx.restore();}});
+function mk(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),cfg);}
+function kRange(){const lo=Math.min(R.A.min,R.B.min),hi=Math.max(R.A.max,R.B.max);const ks=[];for(let k=lo;k<=hi;k++)ks.push(k);return ks;}
+const dLabel=k=>fmtS(sprintEnd(k));
+
+function chartCdf(){
+  const ks=kRange();
+  const ds=(st,col,lbl,fill)=>({label:lbl,data:ks.map(k=>cdfAt(st,k)*100),borderColor:col,backgroundColor:fill,fill:!!fill,tension:.25,pointRadius:3,pointHoverRadius:6,borderWidth:2.5});
+  mk('cdf',{type:'line',data:{labels:ks.map(dLabel),datasets:[
+      ds(R.A,C.aD,`A – bez nowych wymagań (${R.params.backlog} el.)`,'rgba(46,158,91,.10)'),
+      ds(R.B,C.bD,`B – +${R.params.gMin}–${R.params.gMax}% zakresu`,'rgba(42,157,151,.06)')]},
+    options:{interaction:{mode:'index',intersect:false},
+      scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'},title:{display:true,text:'Prawdopodobieństwo ukończenia'}},x:{title:{display:true,text:'Data końca sprintu'},grid:{display:false}}},
+      plugins:{tooltip:{callbacks:{title:i=>`Do ${fmt(sprintEnd(ks[i[0].dataIndex]))} (sprint ${ks[i[0].dataIndex]})`,label:i=>` ${i.dataset.label.split(' –')[0]}: ${nf(i.raw)}% szans na ukończenie`}},
+        refLines:{h:[{y:50,color:C.p50,label:'50%'},{y:85,color:C.p85,label:'85%'},{y:95,color:C.p95,label:'95%'}],
+          v:[{x:ks.indexOf(R.B.p85),color:C.bD,label:'P85 B: '+fmtS(sprintEnd(R.B.p85)),dash:[2,3]},{x:ks.indexOf(R.A.p85),color:C.aD,label:'P85 A: '+fmtS(sprintEnd(R.A.p85)),dash:[2,3]}]}}}});
+}
+function chartHist(){
+  const key=state.view.hist, st=R[key], ks=kRange(), c=counts(key==='A'?R.raw.kA:R.raw.kB,ks[0],ks[ks.length-1]);
+  const cols=ks.map(k=>k<=st.p50?(key==='A'?C.a:C.b):k<=st.p85?(key==='A'?C.aL:C.bL):k<=st.p95?'#c7ead3':C.grey);
+  mk('hist',{type:'bar',data:{labels:ks.map(dLabel),datasets:[{label:'% symulacji',data:Array.from(c,v=>v/st.n*100),backgroundColor:cols,borderRadius:6,borderSkipped:false}]},
+    options:{plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>`${fmt(sprintEnd(ks[i[0].dataIndex]))} · sprint ${ks[i[0].dataIndex]}`,label:i=>` ${nf(i.raw,2)}% symulacji (${ni(c[i.dataIndex])})`}},
+      refLines:{v:['p50','p85','p95'].map(p=>({x:st[p]-ks[0],color:C[p],label:`${p.toUpperCase()}: ${fmtS(sprintEnd(st[p]))}`}))}},
+      scales:{y:{ticks:{callback:v=>v+'%'},title:{display:true,text:'% symulacji'}},x:{grid:{display:false}}}}});
+}
+function chartItems(){
+  const key=state.view.items, st=key==='A'?R.itA:R.itB;
+  const lo=Math.min(R.itA.min,R.itB.min),hi=Math.max(R.itA.max,R.itB.max),vals=[];for(let v=lo;v<=hi;v++)vals.push(v);
+  const c=counts(key==='A'?R.raw.itA:R.raw.itB,lo,hi);
+  $('itemsTitle').textContent='Elementy dostarczone '+monthLabel(R.marchEnd);
+  $('itemsDesc').textContent=`Pełne sprinty: ${R.raw.mS} · scenariusz ${key} · średnia ${nf(st.mean)}, σ ${nf(st.sd)}`;
+  mk('items',{type:'bar',data:{labels:vals,datasets:[{label:'% symulacji',data:Array.from(c,v=>v/st.n*100),backgroundColor:vals.map(v=>v>=st.p15?(key==='A'?C.a:C.b):(key==='A'?C.aL:C.bL)),borderRadius:5,borderSkipped:false}]},
+    options:{plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>`${vals[i[0].dataIndex]} elementów`,label:i=>` ${nf(i.raw,2)}% symulacji · P(≥ ${vals[i.dataIndex]}) = ${pc(1-cdfAt(st,vals[i.dataIndex]-1))}`}},
+      refLines:{v:[{x:st.p50-lo,color:C.p50,label:`50%: ≥ ${st.p50}`},{x:st.p15-lo,color:C.p85,label:`85%: ≥ ${st.p15}`},{x:st.p5-lo,color:C.p95,label:`95%: ≥ ${st.p5}`}]}},
+      scales:{y:{ticks:{callback:v=>v+'%'},title:{display:true,text:'% symulacji'}},x:{grid:{display:false},title:{display:true,text:'Liczba dostarczonych elementów'}}}}});
+}
+function chartCmp(){
+  const ks=kRange(), cA=counts(R.raw.kA,ks[0],ks[ks.length-1]), cB=counts(R.raw.kB,ks[0],ks[ks.length-1]);
+  mk('cmpDist',{type:'bar',data:{labels:ks.map(dLabel),datasets:[
+      {label:'A – bez nowych wymagań',data:Array.from(cA,v=>v/R.A.n*100),backgroundColor:'rgba(46,158,91,.75)',borderRadius:5},
+      {label:`B – +${R.params.gMin}–${R.params.gMax}%`,data:Array.from(cB,v=>v/R.B.n*100),backgroundColor:'rgba(42,157,151,.55)',borderRadius:5}]},
+    options:{interaction:{mode:'index',intersect:false},plugins:{tooltip:{callbacks:{title:i=>fmt(sprintEnd(ks[i[0].dataIndex])),label:i=>` ${i.dataset.label.split(' –')[0]}: ${nf(i.raw,2)}%`}},
+      refLines:{v:[{x:R.A.p85-ks[0],color:C.aD,label:'P85 A'},{x:R.B.p85-ks[0],color:C.bD,label:'P85 B'}]}},
+      scales:{y:{ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}}}});
+  const P=['p50','p85','p95'];
+  mk('cmpPct',{type:'bar',data:{labels:['P50','P85','P95'],datasets:[
+      {label:'A – bez nowych wymagań',data:P.map(p=>R.A[p]*2),backgroundColor:C.a,borderRadius:8},
+      {label:`B – +${R.params.gMin}–${R.params.gMax}%`,data:P.map(p=>R.B[p]*2),backgroundColor:C.b,borderRadius:8}]},
+    options:{plugins:{tooltip:{callbacks:{label:i=>` ${i.dataset.label.split(' –')[0]}: ${i.raw} tyg. → ${fmt(R.S+(i.raw*7-1)*DAY)}`,afterBody:i=>`Różnica: +${(R.B[P[i[0].dataIndex]]-R.A[P[i[0].dataIndex]])*2} tyg.`}}},
+      scales:{y:{beginAtZero:true,title:{display:true,text:'Tygodnie od startu'}},x:{grid:{display:false}}}}});
+}
+function chartTornado(){
+  const base=R.A.p50*2, w=k=>k*2-base;
+  let items=[
+    {l:'Throughput: P15 ↔ P85',r:[w(R.A.p15),w(R.A.p85)],c:C.a},
+    {l:'Throughput: P5 ↔ P95',r:[w(R.A.p5),w(R.A.p95)],c:C.aL},
+    {l:`Wzrost zakresu: +${R.params.gMin}% ↔ +${R.params.gMax}%`,r:[w(R.Lo.p50),w(R.Hi.p50)],c:C.b},
+    {l:'Zakres + throughput (B: P15 ↔ P85)',r:[w(R.B.p15),w(R.B.p85)],c:C.bL}
+  ].sort((x,y)=>(y.r[1]-y.r[0])-(x.r[1]-x.r[0]));
+  $('tornadoDesc').textContent=`Odchylenie terminu (tygodnie) względem P50 scenariusza A = ${fmt(sprintEnd(R.A.p50))}.`;
+  mk('tornado',{type:'bar',data:{labels:items.map(i=>i.l),datasets:[{data:items.map(i=>i.r[0]===i.r[1]?[i.r[0]-.15,i.r[1]+.15]:i.r),backgroundColor:items.map(i=>i.c),borderRadius:6,borderSkipped:false,barPercentage:.6}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:i=>{const r=items[i.dataIndex].r;return ` ${r[0]>=0?'+':''}${r[0]} do ${r[1]>=0?'+':''}${r[1]} tyg. (${fmtS(R.S+((base+r[0])*7-1)*DAY)} – ${fmtS(R.S+((base+r[1])*7-1)*DAY)})`;}}},
+      refLines:{v:[{x:0,color:C.p50,label:'P50 A',dash:[]}]}},
+      scales:{x:{title:{display:true,text:'Zmiana terminu [tygodnie]'},ticks:{callback:v=>(v>0?'+':'')+v}},y:{grid:{display:false}}}}});
+}
+function chartWaterfall(){
+  const a50=R.A.p50*2,b50=R.B.p50*2,b85=R.B.p85*2,b95=R.B.p95*2;
+  const steps=[
+    {l:'P50 A (baza)',r:[0,a50],c:C.a},
+    {l:`+ wzrost zakresu`,r:[a50,b50],c:C.b},
+    {l:'+ zmienność do P85',r:[b50,b85],c:C.bL},
+    {l:'+ ogon do P95',r:[b85,b95],c:'#cfe6e3'},
+    {l:'P95 B (łącznie)',r:[0,b95],c:C.bD}];
+  mk('waterfall',{type:'bar',data:{labels:steps.map(s=>s.l),datasets:[{data:steps.map(s=>s.r[0]===s.r[1]?[s.r[0],s.r[1]+.1]:s.r),backgroundColor:steps.map(s=>s.c),borderRadius:6,borderSkipped:false,barPercentage:.65}]},
+    options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:i=>{const s=steps[i.dataIndex];return (i.dataIndex===0||i.dataIndex===4)?` ${s.r[1]} tyg. → ${fmt(R.S+(s.r[1]*7-1)*DAY)}`:` +${s.r[1]-s.r[0]} tyg. (do ${s.r[1]} tyg. → ${fmt(R.S+(s.r[1]*7-1)*DAY)})`;}}}},
+      scales:{y:{beginAtZero:true,title:{display:true,text:'Tygodnie od startu'}},x:{grid:{display:false}}}}});
+}
+
+/* ---------- CSV ---------- */
+function download(name,text){const b=new Blob(['\ufeff'+text],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+const q=v=>{v=String(v);return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+const n2=(x,d=2)=>nf(x,d).replace(/\s/g,'');
+function exportCsv(){
+  if(!R)return; const L=[], row=(...a)=>L.push(a.map(q).join(';'));
+  row('Monte Carlo Forecast – wyniki'); row('Start',iso(R.S)); row('Backlog',R.params.backlog); row('Throughput',R.params.tp.join(','));
+  row('Iteracje',R.params.iters); row('Wzrost zakresu B [%]',`${R.params.gMin}-${R.params.gMax}`); row('');
+  row('Termin ukończenia','Scenariusz','Średnia [tyg.]','Mediana [tyg.]','P85 [tyg.]','P95 [tyg.]','Odch. std [tyg.]','Data P50','Data P85','Data P95');
+  ['A','B'].forEach(k=>{const s=R[k];row('',k,n2(s.mean*2),s.p50*2,s.p85*2,s.p95*2,n2(s.sd*2),iso(sprintEnd(s.p50)),iso(sprintEnd(s.p85)),iso(sprintEnd(s.p95)));});
+  row('');row('Elementy '+monthLabel(R.marchEnd),'Scenariusz','Średnia','Mediana','Co najmniej (85%)','Co najmniej (95%)','Odch. std');
+  [['A',R.itA],['B',R.itB]].forEach(([k,s])=>row('',k,n2(s.mean),s.p50,s.p15,s.p5,n2(s.sd)));
+  row('');row('Opóźnienie B-A [tyg.]','',n2(R.delay.mean),R.delay.p50,R.delay.p85,R.delay.p95,n2(R.delay.sd));
+  row('');row('Prawdopodobieństwo ukończenia do','Data','A','B');
+  const S=new Date(R.S);for(let i=0;i<15;i++){const d=endOfMonth(S.getUTCFullYear(),S.getUTCMonth()+i);row(MONTHS_NOM[new Date(d).getUTCMonth()]+' '+new Date(d).getUTCFullYear(),iso(d),n2(probBy(R.A,d)*100,2)+'%',n2(probBy(R.B,d)*100,2)+'%');}
+  row('');row('Rozkład terminu','Sprint','Data końca sprintu','A [% symulacji]','B [% symulacji]','A CDF','B CDF');
+  const ks=kRange(),cA=counts(R.raw.kA,ks[0],ks[ks.length-1]),cB=counts(R.raw.kB,ks[0],ks[ks.length-1]);
+  ks.forEach((k,i)=>row('',k,iso(sprintEnd(k)),n2(cA[i]/R.A.n*100,3),n2(cB[i]/R.B.n*100,3),n2(cdfAt(R.A,k)*100,2),n2(cdfAt(R.B,k)*100,2)));
+  row('');row('Odpowiedzi dla biznesu');
+  [...scenarioAnswers('A').map(x=>['A',x[1]]),...scenarioAnswers('B').map(x=>['B',x[1]]),...impactAnswers().map(x=>['Wpływ',x[1]])].forEach(([k,h])=>row(k,h.replace(/<[^>]+>/g,'')));
+  download('monte-carlo-wyniki.csv',L.join('\r\n'));
+}
+function exportRaw(){
+  if(!R)return; const r=R.raw,L=['iteracja;sprinty_A;data_A;zakres_B;sprinty_B;data_B;opoznienie_tyg;elementy_marzec_A;elementy_marzec_B'];
+  for(let i=0;i<r.kA.length;i++)L.push(`${i+1};${r.kA[i]};${iso(sprintEnd(r.kA[i]))};${r.scope[i]};${r.kB[i]};${iso(sprintEnd(r.kB[i]))};${r.delay[i]};${r.itA[i]};${r.itB[i]}`);
+  download('monte-carlo-iteracje.csv',L.join('\r\n'));
+}
+
+/* ---------- init ---------- */
+renderChips(); bindInputs(); scopeHint(); run();
+</script>
 </body>
 </html>
